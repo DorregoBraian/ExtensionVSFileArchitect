@@ -1,0 +1,25 @@
+﻿<Window x:Class="FileArchitectVSIX.CreateArchitectureWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Create Architecture Project"
+        Height="400"
+        Width="600">
+
+    <StackPanel Margin="10">
+
+        <TextBlock Text="Architecture"
+                   FontWeight="Bold"
+                   Margin="0,0,0,5"/>
+
+        <ComboBox Name="ArchitectureCombo">
+            <ComboBoxItem Content="Hexagonal" />
+            <ComboBoxItem Content="Clean" />
+        </ComboBox>
+
+        <Button Content="Generate"
+                Margin="0,20,0,0"
+                Click="OnGenerateClicked"/>
+
+    </StackPanel>
+</Window>
+
