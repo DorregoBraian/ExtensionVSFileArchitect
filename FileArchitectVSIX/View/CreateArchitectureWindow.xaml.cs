@@ -1,17 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using EnvDTE;
+using EnvDTE80;
+using Microsoft.VisualStudio.Shell;
+using System.IO;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+using Window = System.Windows.Window;
+
 
 namespace FileArchitectVSIX
 {
@@ -27,7 +20,44 @@ namespace FileArchitectVSIX
 
         private void OnGenerateClicked(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("Generate clicked!");
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            var dte = (DTE2)Package.GetGlobalService(typeof(DTE));
+
+            if (dte?.Solution == null || dte.Solution.Projects.Count == 0)
+            {
+                MessageBox.Show("No hay ningún proyecto abierto.");
+                return;
+            }
+
+            Project project = dte.Solution.Projects.Item(1);
+
+            CreateArchitecture(project);
+
+            MessageBox.Show("Arquitectura creada correctamente.");
         }
+
+
+        private void CreateFolder(Project project, string folderName)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            string projectPath = Path.GetDirectoryName(project.FullName);
+            string folderPath = Path.Combine(projectPath, folderName);
+
+            if (!Directory.Exists(folderPath))
+            {
+                Directory.CreateDirectory(folderPath);
+                project.ProjectItems.AddFromDirectory(folderPath);
+            }
+        }
+
+        private void CreateArchitecture(Project project)
+        {
+            CreateFolder(project, "Domain");
+            CreateFolder(project, "Application");
+            CreateFolder(project, "Infrastructure");
+        }
+
     }
 }
