@@ -3,23 +3,94 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Create Architecture Project"
         Height="400"
-        Width="600">
+        Width="600"
+        WindowStartupLocation="CenterScreen">
 
-    <StackPanel Margin="10">
+    <Grid Margin="10">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="2*" />
+            <ColumnDefinition Width="3*" />
+        </Grid.ColumnDefinitions>
 
-        <TextBlock Text="Architecture"
-                   FontWeight="Bold"
-                   Margin="0,0,0,5"/>
+        <!-- CONFIG -->
+        <StackPanel Grid.Column="0">
 
-        <ComboBox Name="ArchitectureCombo">
-            <ComboBoxItem Content="Hexagonal" />
-            <ComboBoxItem Content="Clean" />
-        </ComboBox>
+            <!-- ComboBox Architecture -->
+            <TextBlock Text="Architecture" FontWeight="Bold" Margin="0,0,0,5"/>
 
-        <Button Content="Generate"
-                Margin="0,20,0,0"
-                Click="OnGenerateClicked"/>
+            <ComboBox Name="ArchitectureCombo" SelectedIndex="0" Margin="0,0,0,15" SelectionChanged="OnSelectionChanged">
+                <ComboBoxItem Content="Selecione una Arquitectura" IsEnabled="False"/>
+                <ComboBoxItem Content="Hexagonal"/>
+                <ComboBoxItem Content="Clean"/>
+                <ComboBoxItem Content="MVC"/>
+            </ComboBox>
 
-    </StackPanel>
+            <!-- ComboBox Patrones -->
+            <TextBlock Text="Design Patterns" FontWeight="Bold" Margin="0,10,0,5"/>
+
+            <StackPanel>
+                <CheckBox Content="Repository Pattern" Name="RepositoryCheck" Checked="OnSelectionChanged" Unchecked="OnSelectionChanged">
+                    <CheckBox.ToolTip>
+                        <ToolTip MaxWidth="250">
+                            <TextBlock TextWrapping="Wrap">
+                                Patrón de diseño de software que actúa como un mediador entre la lógica de negocio de una aplicación y la capa de acceso a datos (como una base de datos), encapsulando la lógica para almacenar, recuperar y buscar objetos, y así separar las preocupaciones y facilitar el mantenimiento, las pruebas y las migraciones de datos sin afectar el núcleo de la aplicación.
+                            </TextBlock>
+                        </ToolTip>
+                    </CheckBox.ToolTip>
+                </CheckBox>
+
+                <CheckBox Content="CQRS" Name="CqrsCheck" Checked="OnSelectionChanged" Unchecked="OnSelectionChanged">
+                    <CheckBox.ToolTip>
+                        <ToolTip MaxWidth="250">
+                            <TextBlock TextWrapping="Wrap">
+                                Patrón de arquitectura de software que separa las operaciones de lectura (Consultas o Queries) de las operaciones de escritura (Comandos o Commands).
+                            </TextBlock>
+                        </ToolTip>
+                    </CheckBox.ToolTip>
+                </CheckBox>
+
+                <CheckBox Content="Unit of Work" Name="UnitOfWorkCheck" Checked="OnSelectionChanged" Unchecked="OnSelectionChanged">
+                    <CheckBox.ToolTip>
+                        <ToolTip MaxWidth="250">
+                            <TextBlock TextWrapping="Wrap">
+                                Patrón de diseño de software que agrupa múltiples operaciones de base de datos (como inserciones, actualizaciones y eliminaciones) en una única transacción, asegurando que todas se confirmen (commit) o ninguna se confirme (rollback), manteniendo la integridad de los datos. Actúa como una capa de abstracción sobre el ORM (como Entity Framework, donde DbContext ya lo implementa), coordinando repositorios para que todos los cambios se guarden juntos, o si falla algo, todo se deshace, evitando inconsistencias.
+                            </TextBlock>
+                        </ToolTip>
+                    </CheckBox.ToolTip>
+                </CheckBox>
+
+                <CheckBox Content="AutoMapper" Name="AutoMapperCheck" Checked="OnSelectionChanged" Unchecked="OnSelectionChanged">
+                    <CheckBox.ToolTip>
+                        <ToolTip MaxWidth="250">
+                            <TextBlock TextWrapping="Wrap">
+                                AutoMapper es una biblioteca de mapeo de objetos. Ayuda a los desarrolladores a mapear automáticamente datos entre objetos con estructuras similares como entidades de base de datos y DTOs (Objetos de Transferencia de Datos).
+                            </TextBlock>
+                        </ToolTip>
+                    </CheckBox.ToolTip>
+                </CheckBox>
+            </StackPanel>
+
+            <!-- Buttons -->
+            <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
+                <Button Content="Generate" Width="100" Margin="0,0,10,0" Click="OnGenerateClicked"/>
+                <Button Content="Reset" Width="100" Click="OnResetClicked"/>
+            </StackPanel>
+        </StackPanel>
+
+        <!-- PREVIEW -->
+        <Grid Grid.Column="1" Margin="10,0,0,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <TextBlock Text="Project Preview"
+               FontWeight="Bold"
+               Margin="0,0,0,5"/>
+
+            <TreeView Name="PreviewTree"
+              Grid.Row="1"/>
+        </Grid>
+    </Grid>
 </Window>
 
