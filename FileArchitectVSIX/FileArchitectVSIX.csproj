@@ -46,6 +46,17 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Command\CreateArchitectureCommand.cs" />
+    <Compile Include="Dtos\ArchitectureOptionsDto.cs" />
+    <Compile Include="Dtos\ArchitectureRequestDto.cs" />
+    <Compile Include="Dtos\Enum\ArchitectureType.cs" />
+    <Compile Include="Dtos\OperationResultDto.cs" />
+    <Compile Include="Dtos\ProjectSpecDto.cs" />
+    <Compile Include="IServices\IArchitectureService.cs" />
+    <Compile Include="IServices\IFolderAndFileService.cs" />
+    <Compile Include="IServices\IProjectTemplateService.cs" />
+    <Compile Include="Services\ArchitectureService.cs" />
+    <Compile Include="Services\FolderAndFileService.cs" />
+    <Compile Include="Services\ProjectTemplateService.cs" />
     <Compile Include="View\CreateArchitectureWindow.xaml.cs">
       <DependentUpon>CreateArchitectureWindow.xaml</DependentUpon>
     </Compile>

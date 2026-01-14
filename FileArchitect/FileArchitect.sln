@@ -1,10 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
-VisualStudioVersion = 18.0.11222.15 d18.0
+VisualStudioVersion = 18.0.11222.15
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FileArchitectLibrary", "FileArchitectLibrary.csproj", "{A5C0ED2A-703F-42C9-8583-6571D3DB72BA}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FileArchitectVSIX", "..\FileArchitectVSIX\FileArchitectVSIX.csproj", "{2FF5A39B-D19E-4804-BD23-81716F596047}"
 EndProject
 Global
@@ -13,10 +11,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{A5C0ED2A-703F-42C9-8583-6571D3DB72BA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A5C0ED2A-703F-42C9-8583-6571D3DB72BA}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A5C0ED2A-703F-42C9-8583-6571D3DB72BA}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A5C0ED2A-703F-42C9-8583-6571D3DB72BA}.Release|Any CPU.Build.0 = Release|Any CPU
 		{2FF5A39B-D19E-4804-BD23-81716F596047}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{2FF5A39B-D19E-4804-BD23-81716F596047}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2FF5A39B-D19E-4804-BD23-81716F596047}.Release|Any CPU.ActiveCfg = Release|Any CPU

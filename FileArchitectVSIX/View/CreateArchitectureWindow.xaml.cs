@@ -1,15 +1,17 @@
 ﻿using EnvDTE;
 using EnvDTE80;
+using FileArchitectVSIX.Dtos;
+using FileArchitectVSIX.Dtos.Enum;
+using FileArchitectVSIX.IServices;
+using FileArchitectVSIX.Services;
 using Microsoft.VisualStudio.Shell;
 using System;
-using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Reflection;
-using System.Security.Policy;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media.Imaging;
+using VSLangProj;
 using Window = System.Windows.Window;
 
 namespace FileArchitectVSIX
@@ -19,9 +21,14 @@ namespace FileArchitectVSIX
     /// </summary>
     public partial class CreateArchitectureWindow : Window
     {
+        private readonly IArchitectureService _architectureService;
         public CreateArchitectureWindow()
         {
             InitializeComponent();
+            _architectureService = new ArchitectureService(
+                new FolderAndFileService(),
+                new ProjectTemplateService()
+            );
         }
 
         // Método para manejar el clic en el botón "Generar"
@@ -29,209 +36,81 @@ namespace FileArchitectVSIX
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
-            // Obtener la arquitectura seleccionada
-            string architecture = GetSelectedArchitecture();
-
-            if (string.IsNullOrEmpty(architecture))
+            // Validar arquitectura
+            if (ArchitectureCombo.SelectedIndex <= 0)
             {
                 MessageBox.Show("Seleccioná una arquitectura.");
                 return;
             }
 
-            // Obtener el proyecto actual
-            var dte = (DTE2)Package.GetGlobalService(typeof(DTE));
+            // Obtener arquitectura seleccionada
+            string architecture = ((ComboBoxItem)ArchitectureCombo.SelectedItem).Content.ToString();
 
-            if (dte?.Solution == null || dte.Solution.Projects.Count == 0)
+            // Obtener namespace base
+            string baseNameSpace = BaseNamespaceTextBox.Text?.Trim();
+
+            // Validar namespace
+            if (string.IsNullOrWhiteSpace(baseNameSpace))
             {
-                MessageBox.Show("No hay ningún proyecto abierto.");
+                MessageBox.Show("Ingresá el nombre base del proyecto / namespace.");
                 return;
             }
 
-            Project project = dte.Solution.Projects.Item(1);
+            var request = new ArchitectureRequestDto
+            {
+                Architecture = (ArchitectureType)Enum.Parse(typeof(ArchitectureType), architecture),
+                NameSpace = baseNameSpace,
+                //ProjectName = null, //BaseNamespaceTextBox.Text.Trim(), // o pedir otro input
+                Options = new ArchitectureOptionsDto
+                {
+                    UseRepository = RepositoryCheck.IsChecked == true,
+                    UseCQRS = CqrsCheck.IsChecked == true,
+                    UseUnitOfWork = UnitOfWorkCheck.IsChecked == true,
+                    UseAutoMapper = AutoMapperCheck.IsChecked == true
+                }
+            };
+
+            // Obtener el proyecto actual
+            var dte = (DTE2)Package.GetGlobalService(typeof(DTE));
 
             // Crear la arquitectura de carpetas
-            GenerateArchitecture(project, dte, architecture);
+            var result = GenerateArchitecture(request, dte);
 
-            MessageBox.Show("Arquitectura creada correctamente.");
+            MessageBox.Show(result.Message);
         }
 
         // Método para generar la arquitectura seleccionada
-        private void GenerateArchitecture(Project project, DTE2 dte, string architecture)
+        private OperationResultDto GenerateArchitecture(ArchitectureRequestDto requestDto, DTE2 dte)
         {
-            switch (architecture)
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            switch (requestDto.Architecture)
             {
-                case "Hexagonal":
-                    CreateHexagonalArchitecture(project, dte);
-                    //CreateFolder(project, "Domain");
-                    //CreateFolder(project, "Application");
-                    //CreateFolder(project, "Infrastructure");
-                    //CreateFolder(project, "Adapters");
-                    break;
+                case ArchitectureType.Hexagonal:
+                    return _architectureService.CreateHexagonalArchitecture(dte,requestDto);
+                    //CreateWebApiProjectAndAddToSolution(dte, baseNameSpace);
+                    //CreateHexagonalArchitecture(dte, baseNameSpace);
 
-                case "Clean":
-                    CreateFolder(project, "Core");
-                    CreateFolder(project, "UseCases");
-                    CreateFolder(project, "InterfaceAdapters");
-                    CreateFolder(project, "Frameworks");
-                    break;
+                //case ArchitectureType.Clean:
+                    //CreateFolder(project, "Core");
+                    //CreateFolder(project, "UseCases");
+                    //CreateFolder(project, "InterfaceAdapters");
+                    //CreateFolder(project, "Frameworks");
+                    
 
-                case "MVC":
-                    CreateFolder(project, "Models");
-                    CreateFolder(project, "Views");
-                    CreateFolder(project, "Controllers");
-                    break;
+                //case ArchitectureType.MVC:
+                    //CreateFolder(project, "Models");
+                    //CreateFolder(project, "Views");
+                    //CreateFolder(project, "Controllers");
+                    
 
                 default:
-                    MessageBox.Show("Seleccioná una arquitectura.");
-                    break;
+                    return new OperationResultDto
+                    {
+                        Success = false,
+                        Message = "Seleccioná una arquitectura."
+                    };
             }
-        }
-
-        // Método específico para arquitectura Hexagonal
-        private void CreateHexagonalArchitecture(Project project, DTE2 dte)
-        {
-            ThreadHelper.ThrowIfNotOnUIThread();
-
-            // var dte = (DTE2)Package.GetGlobalService(typeof(DTE)); // Obtiene el DTE2
-            var solution = (Solution2)dte.Solution; // Obtiene la solución actual
-
-            try
-            {
-                // DOMAIN
-                var domain = CreateClassLibraryProject(solution, "Domain"); // Domain
-                CreateFolder(domain, "Entities"); // Entities
-                CreateFolder(domain, "IServices"); // IServices
-
-                // Repository (si se selecciona)
-                if (RepositoryCheck.IsChecked == true)
-                {
-                    CreateFolder(domain, "IRepository"); // Repository
-                }
-
-
-                // APPLICATION
-                var application = CreateClassLibraryProject(solution, "Application"); // Application
-                CreateFolder(application, "DTOs"); // DTOs
-                CreateFolder(application, "IServices"); // Services
-
-
-                // INFRASTRUCTURE
-                var infrastructure = CreateClassLibraryProject(solution, "Infrastructure");
-                CreateFile(infrastructure, "DbContext");
-
-                // Repository (si se selecciona)
-                if (RepositoryCheck.IsChecked == true)
-                {
-                    CreateFolder(infrastructure, "Repository"); // Repository
-                }
-
-                // CQRS (solo si se selecciona)
-                if (CqrsCheck.IsChecked == true)
-                {
-                    var commands = CreateFolder(infrastructure, "Commands");
-                    CreateSubFolder(commands, "Create");
-                    CreateSubFolder(commands, "Update");
-                    CreateSubFolder(commands, "Delete");
-
-                    var queries = CreateFolder(infrastructure, "Queries");
-                    CreateSubFolder(queries, "Get");
-                }
-
-                // AutoMapper (si se selecciona)
-                if (AutoMapperCheck.IsChecked == true)
-                {
-                    CreateFile(infrastructure, "AutoMapperProfiles"); // AutoMapper
-                }
-
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error al creando estructura: {ex.Message}");
-            }
-        }
-
-        // Método para crear un proyecto de Class Library
-        private Project CreateClassLibraryProject(Solution2 solution,string projectName)
-        {
-            ThreadHelper.ThrowIfNotOnUIThread();
-
-            // Obtiene el template oficial de Class Library de VS
-            string templatePath = solution.GetProjectTemplate("ClassLibrary.zip","CSharp");
-
-            // Ruta física donde se va a crear el proyecto
-            string solutionDir = Path.GetDirectoryName(solution.FullName);
-            string projectDir = Path.Combine(solutionDir, projectName);
-
-            // Crea el proyecto dentro de la solución
-            solution.AddFromTemplate(
-                templatePath,
-                projectDir,
-                projectName,
-                false);
-
-            // Devuelve el proyecto recién creado
-            return solution.Projects
-                .Cast<Project>()
-                .First(p => p.Name == projectName);
-        }
-
-        // Método para crear una carpeta en el proyecto
-        private ProjectItem CreateFolder(Project project, string folderName)
-        {
-            ThreadHelper.ThrowIfNotOnUIThread();
-
-            string projectPath = Path.GetDirectoryName(project.FullName);
-            string folderPath = Path.Combine(projectPath, folderName);
-
-            // Crear carpeta en disco si no existe
-            if (!Directory.Exists(folderPath))
-            {
-                Directory.CreateDirectory(folderPath);
-            }
-
-            // Agregarla al proyecto de Visual Studio
-            return project.ProjectItems.AddFromDirectory(folderPath);
-        }
-
-        // Método para crear una subcarpeta dentro de una carpeta existente
-        private ProjectItem CreateSubFolder(ProjectItem parentFolder, string folderName)
-        {
-            ThreadHelper.ThrowIfNotOnUIThread();
-
-            string parentPath = Path.GetDirectoryName(parentFolder.FileNames[1]);
-            string folderPath = Path.Combine(parentPath, folderName);
-
-            // Crear carpeta en disco
-            if (!Directory.Exists(folderPath))
-            {
-                Directory.CreateDirectory(folderPath);
-            }
-
-            // Agregar al proyecto dentro de la carpeta padre
-            return parentFolder.ProjectItems.AddFromDirectory(folderPath);
-        }
-
-        // Método para crear un archivo dentro de una carpeta existente
-        private void CreateFile(Project project, string fileName)
-        {
-            ThreadHelper.ThrowIfNotOnUIThread();
-
-            string folderPath = Path.GetDirectoryName(project.FileName);
-            string filePath = Path.Combine(folderPath, $"{fileName}.cs");
-
-            // Crear archivo si no existe
-            if (!File.Exists(filePath))
-            {
-                File.WriteAllText(filePath, $@"namespace {project.Name}
-                {{
-                    public class {fileName}
-                    {{
-                    }}
-                }}");
-            }
-
-            // Agregar al proyecto
-            project.ProjectItems.AddFromFile(filePath);
         }
 
         // Método para resetear la ventana
@@ -250,29 +129,26 @@ namespace FileArchitectVSIX
             PreviewTree.Items.Clear();
         }
 
-
-
-
-
-
-
-
-
-
-        // Método para obtener la arquitectura seleccionada en el ComboBox
-        private string GetSelectedArchitecture()
-        {
-            if (ArchitectureCombo.SelectedItem is ComboBoxItem selectedItem)
-            {
-                return selectedItem.Content.ToString();
-            }
-
-            return null;
-        }
-
         // Evento para actualizar la vista previa cuando cambia la selección
         private void OnSelectionChanged(object sender, RoutedEventArgs e)
         {
+            // Protección contra inicialización temprana
+            if (BaseNamespaceLabel == null || BaseNamespaceTextBox == null)
+                return;
+
+            // Verificamos si eligió una arquitectura válida
+            bool architectureSelected = ArchitectureCombo.SelectedIndex > 0;
+
+            // Mostrar u ocultar label
+            BaseNamespaceLabel.Visibility = architectureSelected
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+            // Mostrar u ocultar textbox
+            BaseNamespaceTextBox.Visibility = architectureSelected
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
             UpdatePreview();
         }
 
@@ -287,7 +163,7 @@ namespace FileArchitectVSIX
             if (ArchitectureCombo.SelectedIndex <= 0)
                 return;
 
-            string architecture =((ComboBoxItem)ArchitectureCombo.SelectedItem).Content.ToString();
+            string architecture = ((ComboBoxItem)ArchitectureCombo.SelectedItem).Content.ToString();
 
             var root = new TreeViewItem
             {
@@ -354,15 +230,7 @@ namespace FileArchitectVSIX
             return item;
         }
 
-        // Método para agregar archivo al TreeView
-        //private void AddFile(TreeViewItem parent, string name)
-        //{
-        //    parent.Items.Add(new TreeViewItem
-        //    {
-        //        Header = CreateHeader(name, "File.png")
-        //    });
-        //}
-
+        // Método auxiliar para agregar archivo al TreeView
         private void AddFile(TreeViewItem parent, string fileName)
         {
             var item = new TreeViewItem
@@ -372,7 +240,6 @@ namespace FileArchitectVSIX
 
             parent.Items.Add(item);
         }
-
 
         // Método auxiliar para crear un header con ícono y texto
         private StackPanel CreateHeader(string text, string iconRelativePath)
@@ -402,6 +269,7 @@ namespace FileArchitectVSIX
                 }
             };
         }
+
 
 
     }
