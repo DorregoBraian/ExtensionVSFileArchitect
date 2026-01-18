@@ -2,14 +2,18 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace FileArchitectVSIX.IServices
 {
     public interface IFolderAndFileService
     {
-        ProjectItem CreateFolder(Project project, string folderName);
-        ProjectItem CreateSubFolder(ProjectItem parentFolder, string folderName);
-        void CreateAutoMapperFile(Project project, string fileName);
-        void CreateDbContextFile(Project project, string fileName);
+        Task<ProjectItem> CreateFolderAsync (Project project, string folderName);
+        Task<ProjectItem> CreateSubFolderAsync (ProjectItem parentFolder, string folderName);
+        Task CreateAutoMapperFileAsync (Project project, string fileName);
+        Task CreateDbContextFileAsync (Project project, string fileName);
+
+
+
     }
 }

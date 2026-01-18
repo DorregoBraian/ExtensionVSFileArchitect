@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace FileArchitectVSIX.Services
@@ -23,121 +24,209 @@ namespace FileArchitectVSIX.Services
         }
 
         // Método específico para arquitectura Hexagonal
-        public OperationResultDto CreateHexagonalArchitecture(DTE2 dte, ArchitectureRequestDto request)
+        public async Task<OperationResultDto> CreateHexagonalArchitectureAsync (DTE2 dte, ArchitectureRequestDto request, IProgress<ProgressReportDto> progress)
         {
-            ThreadHelper.ThrowIfNotOnUIThread();
-
-            var option = new OperationResultDto();
-
-            try
+            return await Task.Run(async () =>
             {
-                _projectTemplateService.CreateWebApiProjectAndAddToSolution(dte, request.ProjectName); // Crea el proyecto Web API principal
+                var option = new OperationResultDto();
 
-                var solution = (Solution2)dte.Solution; // Obtiene la solución actual
+                try
+                {
+                    progress?.Report(new ProgressReportDto
+                    {
+                        Percentage = 5,
+                        Message = "Inicializando arquitectura..."
+                    });
 
-                if (string.IsNullOrWhiteSpace(request.NameSpace))
+                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+                    progress?.Report(new ProgressReportDto
+                    {
+                        Percentage = 15,
+                        Message = "Creando proyecto API..."
+                    });
+
+                    // Crea el proyecto Web API principal
+                    var apiProject = await _projectTemplateService.CreateWebApiProjectAndAddToSolutionAsync(dte, request.ProjectName);
+                    await _folderAndFileService.CreateFolderAsync(apiProject, "Controller");
+
+                    await Task.Yield();
+
+                    var solution = (Solution2)dte.Solution; // Obtiene la solución actual
+
+                    if (string.IsNullOrWhiteSpace(request.NameSpace))
+                    {
+                        return new OperationResultDto
+                        {
+                            Success = false,
+                            Message = "BaseNamespace vacío"
+                        };
+                    }
+
+                    // ------------------------------ DOMAIN ------------------------------
+                    
+                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+                    progress?.Report(new ProgressReportDto
+                    {
+                        Percentage = 30,
+                        Message = "Creando proyecto Domain..."
+                    });
+
+                    if (ProjectExists(solution, "Domain"))
+                    {
+                        return new OperationResultDto
+                        {
+                            Success = false,
+                            Message = "El proyecto 'Domain' ya existe en la solución."
+                        };
+                    }
+
+                    var domain = await _projectTemplateService.CreateClassLibraryProjectAndAddToSolutionAsync(dte, "Domain");
+                    await _folderAndFileService.CreateFolderAsync(domain, "Entities");
+
+                    // Repository (si se selecciona)
+                    if (request.Options.UseRepository)
+                    {
+                        await _folderAndFileService.CreateFolderAsync(domain, "IRepository");
+                    }
+
+                    await Task.Yield();
+
+                    // ------------------------------ APPLICATION ------------------------------
+                    
+                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                    
+                    progress?.Report(new ProgressReportDto
+                    {
+                        Percentage = 50,
+                        Message = "Creando proyecto Application..."
+                    });
+
+                    if (ProjectExists(solution, "Application"))
+                    {
+                        return new OperationResultDto
+                        {
+                            Success = false,
+                            Message = "El proyecto 'Application' ya existe en la solución."
+                        };
+                    }
+
+                    var application = await _projectTemplateService.CreateClassLibraryProjectAndAddToSolutionAsync(dte, "Application");
+                    await _folderAndFileService.CreateFolderAsync(application, "DTOs");
+                    await _folderAndFileService.CreateFolderAsync(application, "IServices");
+                    await _folderAndFileService.CreateFolderAsync(application, "Services");
+
+                    // AutoMapper (si se selecciona)
+                    if (request.Options.UseAutoMapper)
+                    {
+                        await _folderAndFileService.CreateAutoMapperFileAsync(application, "AutoMapperProfiles");
+                    }
+
+                    // CQRS (solo si se selecciona)
+                    if (request.Options.UseCQRS)
+                    {
+                        var commands = await _folderAndFileService.CreateFolderAsync(application, "Commands");
+                        await _folderAndFileService.CreateSubFolderAsync(commands, "Create");
+                        await _folderAndFileService.CreateSubFolderAsync(commands, "Update");
+                        await _folderAndFileService.CreateSubFolderAsync(commands, "Delete");
+
+                        var queries = await _folderAndFileService.CreateFolderAsync(application, "Queries");
+                        await _folderAndFileService.CreateSubFolderAsync(queries, "Get");
+                    }
+
+                    // referencias entre proyectos
+                    await _projectTemplateService.AddProjectReferenceAsync(application, domain);
+
+                    await Task.Yield();
+
+                    // ------------------------------ INFRASTRUCTURE ------------------------------
+                    
+                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+                    progress?.Report(new ProgressReportDto
+                    {
+                        Percentage = 70,
+                        Message = "Creando proyecto Infrastructure..."
+                    });
+
+                    if (ProjectExists(solution, "Infrastructure"))
+                    {
+                        return new OperationResultDto
+                        {
+                            Success = false,
+                            Message = "El proyecto 'Infrastructure' ya existe en la solución."
+                        };
+                    }
+
+                    var infrastructure = await _projectTemplateService.CreateClassLibraryProjectAndAddToSolutionAsync(dte, "Infrastructure");
+                    await _folderAndFileService.CreateDbContextFileAsync(infrastructure, "DbContext");
+
+                    // Repository (si se selecciona)
+                    if (request.Options.UseRepository)
+                    {
+                        await _folderAndFileService.CreateFolderAsync(infrastructure, "IRepository");
+                    }
+
+                    // Referencias entre proyectos
+                    await _projectTemplateService.AddProjectReferenceAsync(infrastructure, application);
+                    await _projectTemplateService.AddProjectReferenceAsync(infrastructure, domain);
+
+                    await Task.Yield();
+
+                    // ------------------------------ TEST ------------------------------
+                    
+                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                    
+                    progress?.Report(new ProgressReportDto
+                    {
+                        Percentage = 85,
+                        Message = "Creando proyecto Test..."
+                    });
+
+                    if (request.Options.UserTestingProject)
+                    {
+
+                        var testProject = await _projectTemplateService.CreateTestProjectAndToSolutionAsync(dte, "Tests");
+
+                        // Creo las carpetas de prueba
+                        await _folderAndFileService.CreateFolderAsync(testProject, "ControllerTests");
+                        await _folderAndFileService.CreateFolderAsync(testProject, "ServiceTests");
+                        await _folderAndFileService.CreateFolderAsync(testProject, "RepositoryTests");
+                    }
+                
+                    // ------------------------------ API PROJECT REFERENCIAS ------------------------------
+                    
+                    progress?.Report(new ProgressReportDto
+                    {
+                        Percentage = 100,
+                        Message = "Agregando referencias entre proyectos..."
+                    });
+
+                    await _projectTemplateService.AddProjectReferenceAsync(apiProject, application);
+                    await _projectTemplateService.AddProjectReferenceAsync(apiProject, infrastructure);
+
+                    await Task.Yield();
+
+                    // Resultado exitoso
+                    return new OperationResultDto
+                    {
+                        Success = true,
+                        Message = "Arquitectura hexagonal creada correctamente."
+                    };
+
+                }
+                catch (Exception ex)
                 {
                     return new OperationResultDto
                     {
                         Success = false,
-                        Message = "BaseNamespace vacío"
+                        Message = "Error al crear la arquitectura hexagonal.",
+                        Exception = ex
                     };
                 }
+            });
 
-                // --------------- DOMAIN ---------------
-                if (ProjectExists(solution, "Domain"))
-                {
-                    return new OperationResultDto
-                    {
-                        Success = false,
-                        Message = "El proyecto 'Domain' ya existe en la solución."
-                    };
-                }
-
-                var domain = _projectTemplateService.CreateClassLibraryProjectAndAddToSolution(dte, "Domain");
-                _folderAndFileService.CreateFolder(domain, "Entities");
-                _folderAndFileService.CreateFolder(domain, "IServices");
-
-                // Repository (si se selecciona)
-                if (request.Options.UseRepository)
-                {
-                    _folderAndFileService.CreateFolder(domain, "IRepository");
-                }
-
-                // --------------- APPLICATION ---------------
-                if (ProjectExists(solution, "Application"))
-                {
-                    return new OperationResultDto
-                    {
-                        Success = false,
-                        Message = "El proyecto 'Application' ya existe en la solución."
-                    };
-                }
-
-                var application = _projectTemplateService.CreateClassLibraryProjectAndAddToSolution(dte, "Application");
-                _folderAndFileService.CreateFolder(application, "DTOs");
-                _folderAndFileService.CreateFolder(application, "IServices");
-
-                // referencias entre proyectos
-                _projectTemplateService.AddProjectReference(application, domain);
-
-                // --------------- INFRASTRUCTURE ---------------
-                if (ProjectExists(solution, "Infrastructure"))
-                {
-                    return new OperationResultDto
-                    {
-                        Success = false,
-                        Message = "El proyecto 'Infrastructure' ya existe en la solución."
-                    };
-                }
-
-                var infrastructure = _projectTemplateService.CreateClassLibraryProjectAndAddToSolution(dte, "Infrastructure");
-                _folderAndFileService.CreateDbContextFile(infrastructure, "DbContext");
-
-                // Repository (si se selecciona)
-                if (request.Options.UseRepository)
-                {
-                    _folderAndFileService.CreateFolder(infrastructure, "Repository");
-                }
-
-                // CQRS (solo si se selecciona)
-                if (request.Options.UseCQRS)
-                {
-                    var commands = _folderAndFileService.CreateFolder(infrastructure, "Commands");
-                    _folderAndFileService.CreateSubFolder(commands, "Create");
-                    _folderAndFileService.CreateSubFolder(commands, "Update");
-                    _folderAndFileService.CreateSubFolder(commands, "Delete");
-
-                    var queries = _folderAndFileService.CreateFolder(infrastructure, "Queries");
-                    _folderAndFileService.CreateSubFolder(queries, "Get");
-                }
-
-                // AutoMapper (si se selecciona)
-                if (request.Options.UseAutoMapper)
-                {
-                    _folderAndFileService.CreateAutoMapperFile(infrastructure, "AutoMapperProfiles");
-                }
-
-                // Referencias entre proyectos
-                _projectTemplateService.AddProjectReference(infrastructure, application);
-                _projectTemplateService.AddProjectReference(infrastructure, domain);
-
-                // Resultado exitoso
-                return new OperationResultDto
-                {
-                    Success = true,
-                    Message = "Arquitectura hexagonal creada correctamente."
-                };
-            }
-            catch (Exception ex)
-            {
-                return new OperationResultDto
-                {
-                    Success = false,
-                    Message = "Error al crear la arquitectura hexagonal.",
-                    Exception = ex
-                };
-            }
         }
 
         // Método para verificar si un proyecto ya existe en la solución

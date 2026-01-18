@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using VSLangProj;
 
 namespace FileArchitectVSIX.Services
@@ -14,9 +15,9 @@ namespace FileArchitectVSIX.Services
     public class ProjectTemplateService : IProjectTemplateService
     {
         // Método para crear un proyecto de biblioteca de clases y agregarlo a la solución
-        public Project CreateClassLibraryProjectAndAddToSolution(DTE2 dte, string projectName)
+        public async Task<Project> CreateClassLibraryProjectAndAddToSolutionAsync (DTE2 dte, string projectName)
         {
-            ThreadHelper.ThrowIfNotOnUIThread();
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
             // Ruta física de la solución
             string solutionPath = Path.GetDirectoryName(dte.Solution.FullName);
@@ -48,9 +49,9 @@ namespace FileArchitectVSIX.Services
         }
 
         // Método para crear un proyecto Web API y agregarlo a la solución
-        public void CreateWebApiProjectAndAddToSolution(DTE2 dte, string projectName)
+        public async Task<Project> CreateWebApiProjectAndAddToSolutionAsync (DTE2 dte, string projectName)
         {
-            ThreadHelper.ThrowIfNotOnUIThread();
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
             // Ruta física donde está la solución (.sln)
             string solutionPath = Path.GetDirectoryName(dte.Solution.FullName);
@@ -75,12 +76,49 @@ namespace FileArchitectVSIX.Services
 
             // Agregar el proyecto a la solución
             dte.Solution.AddFromFile(projectFile);
+
+            // Buscar y retornar el proyecto recién creado
+            var proj = dte.Solution.Projects.Cast<Project>().First(p => p.Name == projectName);
+            return proj;
+        }
+
+        // Método para crear un proyecto de pruebas xUnit y agregarlo a la solución
+        public async Task<Project> CreateTestProjectAndToSolutionAsync (DTE2 dte, string projectName)
+        {
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+            // Ruta donde vive la solución (.sln)
+            string solutionPath = Path.GetDirectoryName(dte.Solution.FullName);
+
+            // Ejecuta: dotnet new xunit -n {projectName}
+            var process = new System.Diagnostics.Process();
+            process.StartInfo.FileName = "dotnet";
+            process.StartInfo.Arguments = $"new xunit -n {projectName}";
+            process.StartInfo.WorkingDirectory = solutionPath;
+            process.StartInfo.CreateNoWindow = true;
+            process.StartInfo.UseShellExecute = false;
+            process.Start();
+            process.WaitForExit();
+
+            // Ruta del proyecto generado
+            string projectFile = Path.Combine(
+                solutionPath,
+                projectName,
+                $"{projectName}.csproj"
+            );
+
+            // Agregar el proyecto a la solución
+            dte.Solution.AddFromFile(projectFile);
+
+            // Buscar y retornar el proyecto recién creado
+            var proj = dte.Solution.Projects.Cast<Project>().First(p => p.Name == projectName);
+            return proj;
         }
 
         // Método para crear un proyecto MVC y agregarlo a la solución
-        public void CreateMvcProjectAndAddToSolution(DTE2 dte, string projectName)
+        public async Task CreateMvcProjectAndAddToSolutionAsync (DTE2 dte, string projectName)
         {
-            ThreadHelper.ThrowIfNotOnUIThread();
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
             // Ruta donde vive la solución (.sln)
             string solutionPath = Path.GetDirectoryName(dte.Solution.FullName);
@@ -108,9 +146,9 @@ namespace FileArchitectVSIX.Services
         }
 
         // Método para agregar una referencia de proyecto
-        public void AddProjectReference(Project from, Project to)
+        public async Task AddProjectReferenceAsync (Project from, Project to)
         {
-            ThreadHelper.ThrowIfNotOnUIThread();
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
             var vsProject = from.Object as VSProject;
 

@@ -3,15 +3,19 @@ using EnvDTE80;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace FileArchitectVSIX.IServices
 {
     public interface IProjectTemplateService
     {
-        Project CreateClassLibraryProjectAndAddToSolution(DTE2 dte, string projectName);
-        void CreateWebApiProjectAndAddToSolution(DTE2 dte, string projectName);
-        void CreateMvcProjectAndAddToSolution(DTE2 dte, string projectName);
-        void AddProjectReference(Project from, Project to);
+        Task<Project> CreateClassLibraryProjectAndAddToSolutionAsync (DTE2 dte, string projectName);
+        Task<Project> CreateWebApiProjectAndAddToSolutionAsync (DTE2 dte, string projectName);
+        Task<Project> CreateTestProjectAndToSolutionAsync (DTE2 dte, string projectName);
+        Task CreateMvcProjectAndAddToSolutionAsync (DTE2 dte, string projectName);
+        Task AddProjectReferenceAsync (Project from, Project to);
+
+
 
     }
 }

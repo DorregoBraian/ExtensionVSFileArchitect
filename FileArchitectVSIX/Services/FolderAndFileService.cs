@@ -2,6 +2,7 @@
 using FileArchitectVSIX.IServices;
 using Microsoft.VisualStudio.Shell;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace FileArchitectVSIX.Services
 {
@@ -9,9 +10,9 @@ namespace FileArchitectVSIX.Services
     {
       
         // Método para crear una carpeta en el proyecto
-        public ProjectItem CreateFolder(Project project, string folderName)
+        public async Task<ProjectItem> CreateFolderAsync (Project project, string folderName)
         {
-            ThreadHelper.ThrowIfNotOnUIThread();
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
             string projectPath = Path.GetDirectoryName(project.FullName); // Ruta física del proyecto
             string folderPath = Path.Combine(projectPath, folderName); // Ruta completa de la nueva carpeta
@@ -27,9 +28,9 @@ namespace FileArchitectVSIX.Services
         }
 
         // Método para crear una subcarpeta dentro de una carpeta existente en el proyecto
-        public ProjectItem CreateSubFolder(ProjectItem parentFolder, string folderName)
+        public async Task<ProjectItem> CreateSubFolderAsync (ProjectItem parentFolder, string folderName)
         {
-            ThreadHelper.ThrowIfNotOnUIThread();
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
             string parentPath = Path.GetDirectoryName(parentFolder.FileNames[1]);
             string folderPath = Path.Combine(parentPath, folderName);
@@ -45,9 +46,9 @@ namespace FileArchitectVSIX.Services
         }
 
         // Método para crear un archivo dentro de una carpeta existente
-        public void CreateAutoMapperFile(Project project, string fileName)
+        public async Task CreateAutoMapperFileAsync (Project project, string fileName)
         {
-            ThreadHelper.ThrowIfNotOnUIThread();
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
             string folderPath = Path.GetDirectoryName(project.FileName);
             string filePath = Path.Combine(folderPath, $"{fileName}.cs");
@@ -69,9 +70,9 @@ namespace FileArchitectVSIX.Services
         }
 
         // Método para crear un archivo DbContext
-        public void CreateDbContextFile(Project project, string fileName)
+        public async Task CreateDbContextFileAsync (Project project, string fileName)
         {
-            ThreadHelper.ThrowIfNotOnUIThread();
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
             string folderPath = Path.GetDirectoryName(project.FileName);
             string filePath = Path.Combine(folderPath, $"{fileName}.cs");
@@ -107,7 +108,6 @@ namespace FileArchitectVSIX.Services
             // Agregar al proyecto
             project.ProjectItems.AddFromFile(filePath);
         }
-
 
 
 

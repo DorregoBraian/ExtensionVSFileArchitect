@@ -8,6 +8,7 @@ using Microsoft.VisualStudio.Shell;
 using System;
 using System.IO;
 using System.Reflection;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media.Imaging;
@@ -25,16 +26,49 @@ namespace FileArchitectVSIX
         public CreateArchitectureWindow()
         {
             InitializeComponent();
+
             _architectureService = new ArchitectureService(
                 new FolderAndFileService(),
                 new ProjectTemplateService()
             );
         }
 
-        // Método para manejar el clic en el botón "Generar"
-        private void OnGenerateClicked(object sender, RoutedEventArgs e)
+        // Método para generar la arquitectura seleccionada
+        private async Task<OperationResultDto> GenerateArchitectureAsync (ArchitectureRequestDto requestDto, DTE2 dte, IProgress<ProgressReportDto> progress)
         {
-            ThreadHelper.ThrowIfNotOnUIThread();
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+            switch (requestDto.Architecture)
+            {
+                case ArchitectureType.Hexagonal:
+                    return await _architectureService.CreateHexagonalArchitectureAsync (dte, requestDto, progress);
+
+                //case ArchitectureType.Clean:
+                    //CreateFolder(project, "Core");
+                    //CreateFolder(project, "UseCases");
+                    //CreateFolder(project, "InterfaceAdapters");
+                    //CreateFolder(project, "Frameworks");
+                    
+
+                //case ArchitectureType.MVC:
+                    //CreateFolder(project, "Models");
+                    //CreateFolder(project, "Views");
+                    //CreateFolder(project, "Controllers");
+                    
+
+                default:
+                    return new OperationResultDto
+                    {
+                        Success = false,
+                        Message = "Seleccioná una arquitectura."
+                    };
+            }
+        }
+        
+        // Método para el botón "Generar"
+        private async void OnGenerateClickedAsync (object sender, RoutedEventArgs e)
+        {
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
             // Validar arquitectura
             if (ArchitectureCombo.SelectedIndex <= 0)
@@ -60,169 +94,232 @@ namespace FileArchitectVSIX
             {
                 Architecture = (ArchitectureType)Enum.Parse(typeof(ArchitectureType), architecture),
                 NameSpace = baseNameSpace,
-                //ProjectName = null, //BaseNamespaceTextBox.Text.Trim(), // o pedir otro input
+                ProjectName = baseNameSpace, // Nombre base para los proyectos web API y test
                 Options = new ArchitectureOptionsDto
                 {
                     UseRepository = RepositoryCheck.IsChecked == true,
                     UseCQRS = CqrsCheck.IsChecked == true,
                     UseUnitOfWork = UnitOfWorkCheck.IsChecked == true,
-                    UseAutoMapper = AutoMapperCheck.IsChecked == true
+                    UseAutoMapper = AutoMapperCheck.IsChecked == true,
+                    UserTestingProject = TestCheck.IsChecked == true,
                 }
             };
 
             // Obtener el proyecto actual
             var dte = (DTE2)Package.GetGlobalService(typeof(DTE));
 
-            // Crear la arquitectura de carpetas
-            var result = GenerateArchitecture(request, dte);
-
-            MessageBox.Show(result.Message);
-        }
-
-        // Método para generar la arquitectura seleccionada
-        private OperationResultDto GenerateArchitecture(ArchitectureRequestDto requestDto, DTE2 dte)
-        {
-            ThreadHelper.ThrowIfNotOnUIThread();
-
-            switch (requestDto.Architecture)
+            var progress = new Progress<ProgressReportDto>(report =>
             {
-                case ArchitectureType.Hexagonal:
-                    return _architectureService.CreateHexagonalArchitecture(dte,requestDto);
-                    //CreateWebApiProjectAndAddToSolution(dte, baseNameSpace);
-                    //CreateHexagonalArchitecture(dte, baseNameSpace);
+                _ = UpdateProgressAsync(report);
+            });
 
-                //case ArchitectureType.Clean:
-                    //CreateFolder(project, "Core");
-                    //CreateFolder(project, "UseCases");
-                    //CreateFolder(project, "InterfaceAdapters");
-                    //CreateFolder(project, "Frameworks");
-                    
+            await ShowLoadingAsync();
 
-                //case ArchitectureType.MVC:
-                    //CreateFolder(project, "Models");
-                    //CreateFolder(project, "Views");
-                    //CreateFolder(project, "Controllers");
-                    
+            // Crear la arquitectura de carpetas
+            var result = await GenerateArchitectureAsync (request, dte, progress);
 
-                default:
-                    return new OperationResultDto
-                    {
-                        Success = false,
-                        Message = "Seleccioná una arquitectura."
-                    };
+            await HideLoadingAsync();
+
+            MessageBox.Show(
+                result.Message,
+                "Generador de Arquitectura",
+                MessageBoxButton.OK,
+                result.Success ? MessageBoxImage.Information : MessageBoxImage.Error
+            );
+
+            if (result.Success)
+            {
+                this.Close();
             }
         }
 
-        // Método para resetear la ventana
-        private void OnResetClicked(object sender, RoutedEventArgs e)
+        // Método para el boton "Resetear"
+        private async void OnResetClickedAsync (object sender, RoutedEventArgs e)
         {
             // Reset arquitectura
             ArchitectureCombo.SelectedIndex = 0;
+
+            // Reset texto
+            BaseNamespaceTextBox.Text = string.Empty;
 
             // Reset patrones
             RepositoryCheck.IsChecked = false;
             CqrsCheck.IsChecked = false;
             UnitOfWorkCheck.IsChecked = false;
             AutoMapperCheck.IsChecked = false;
+            TestCheck.IsChecked = false;
+
+            // Ocultar controles dependientes
+            BaseNamespaceLabel.Visibility = Visibility.Collapsed;
+            BaseNamespaceTextBox.Visibility = Visibility.Collapsed;
+            PatternsPanel.Visibility = Visibility.Collapsed;
+            ActionsPanel.Visibility = Visibility.Collapsed;
 
             // Limpiar preview
             PreviewTree.Items.Clear();
         }
 
         // Evento para actualizar la vista previa cuando cambia la selección
-        private void OnSelectionChanged(object sender, RoutedEventArgs e)
+        private async void OnSelectionChangedAsync (object sender, RoutedEventArgs e)
         {
-            // Protección contra inicialización temprana
-            if (BaseNamespaceLabel == null || BaseNamespaceTextBox == null)
+            // protección contra inicialización temprana
+            if (BaseNamespaceLabel == null || BaseNamespaceTextBox == null || PatternsPanel == null || ActionsPanel == null)
                 return;
 
-            // Verificamos si eligió una arquitectura válida
             bool architectureSelected = ArchitectureCombo.SelectedIndex > 0;
 
-            // Mostrar u ocultar label
-            BaseNamespaceLabel.Visibility = architectureSelected
-                ? Visibility.Visible
-                : Visibility.Collapsed;
+            // mostrar solo la etiqueta y el TextBox del nombre
+            // Mostrar input de nombre
+            BaseNamespaceLabel.Visibility = Visibility.Visible;
+            BaseNamespaceContainer.Visibility = Visibility.Visible;
 
-            // Mostrar u ocultar textbox
-            BaseNamespaceTextBox.Visibility = architectureSelected
-                ? Visibility.Visible
-                : Visibility.Collapsed;
+            // Resetear estado inicial
+            BaseNamespaceTextBox.Text = string.Empty;
+            BaseNamespacePlaceholder.Visibility = Visibility.Visible;
 
-            UpdatePreview();
+            // esconder patrones y botones hasta que se escriba el nombre
+            PatternsPanel.Visibility = Visibility.Collapsed;
+            ActionsPanel.Visibility = Visibility.Collapsed;
+
+            // limpiar preview si se deseleccionó
+            await UpdatePreviewAsync ();
+        }
+
+        // Evento para actualizar la vista previa cuando cambia el texto del namespace base
+        private async void OnBaseNamespaceTextChangedAsync (object sender, TextChangedEventArgs e)
+        {
+            if (BaseNamespaceTextBox == null || BaseNamespacePlaceholder == null || PatternsPanel == null || ActionsPanel == null)
+                return;
+
+            string txt = BaseNamespaceTextBox.Text?.Trim();
+
+            bool hasName = !string.IsNullOrWhiteSpace(txt);
+
+            BaseNamespacePlaceholder.Visibility =string.IsNullOrWhiteSpace(txt) ? Visibility.Visible : Visibility.Collapsed;
+            PatternsPanel.Visibility = hasName ? Visibility.Visible : Visibility.Collapsed;
+            ActionsPanel.Visibility = hasName ? Visibility.Visible : Visibility.Collapsed;
+
+            // actualizamos la preview con el nombre (para que muestre el nombre de la solución/proyecto)
+            await UpdatePreviewAsync();
+        }
+
+        // Evento para actualizar la vista previa cuando cambia algún patrón
+        private async void OnPatternChangedAsync (object sender, RoutedEventArgs e)
+        {
+            await UpdatePreviewAsync();
         }
 
         // Método para actualizar la vista previa del TreeView
-        private void UpdatePreview()
+        private async Task UpdatePreviewAsync()
         {
-            if (PreviewTree == null)
-                return;
-
             PreviewTree.Items.Clear();
 
+            // Sin arquitectura → no mostrar nada
             if (ArchitectureCombo.SelectedIndex <= 0)
                 return;
 
-            string architecture = ((ComboBoxItem)ArchitectureCombo.SelectedItem).Content.ToString();
+            string baseName = string.IsNullOrWhiteSpace(BaseNamespaceTextBox.Text)
+                ? "Project"
+                : BaseNamespaceTextBox.Text.Trim();
 
+            // ROOT
             var root = new TreeViewItem
             {
-                Header = "Project"
+                Header = CreateHeader(baseName, "IconProject.png"),
+                IsExpanded = true
             };
 
             PreviewTree.Items.Add(root);
 
-            if (architecture == "Hexagonal")
-            {
-                AddFolder(root, "Domain");
-                AddFolder(root, "Application");
-                AddFolder(root, "Infrastructure");
-            }
+            // SOLO proyectos base (SIEMPRE)
+            var api = CreateProject(root, $"{baseName}");
+            var domain = CreateProject(root, $"Domain");
+            var application = CreateProject(root, $"Application");
+            var infrastructure = CreateProject(root, $"Infrastructure");
+            var test = CreateProject(root, $"Tests");
 
-            if (architecture == "Clean")
-            {
-                AddFolder(root, "Core");
-                AddFolder(root, "UseCases");
-                AddFolder(root, "InterfaceAdapters");
-                AddFolder(root, "Frameworks");
-            }
+            // Carpetas mínimas base
+            AddFolder (api, "Controllers");
+            AddFolder(domain, "Entities");
+            AddFolder(application, "DTOs");
+            AddFolder(application, "Services");
+            AddFolder(application, "IServices");
+            AddFolder(infrastructure, "DbContext.cs");
 
-            if (architecture == "MVC")
-            {
-                AddFolder(root, "Models");
-                AddFolder(root, "Views");
-                AddFolder(root, "Controllers");
-            }
+            // SOLO si el usuario marcó patrones
+            await ApplyPatternsInTreeViewAsync (domain, application, infrastructure, test);
 
-            // Patrones
-            if (RepositoryCheck.IsChecked == true)
-            {
-                var repo = AddFolder(root, "Repository");
-                AddFolder(repo, "IRepository");
-                AddFolder(repo, "Repository");
-            }
-
-            if (CqrsCheck.IsChecked == true)
-            {
-                var cqrs = AddFolder(root, "CQRS");
-                AddFolder(cqrs, "Commands");
-                AddFolder(cqrs, "Queries");
-            }
-
-            if (AutoMapperCheck.IsChecked == true)
-            {
-                AddFile(root, "AutoMapperProfiles");
-            }
-
-            root.IsExpanded = true;
+            // Expandir nodos
+            api.IsExpanded = true;
+            domain.IsExpanded = true;
+            application.IsExpanded = true;
+            infrastructure.IsExpanded = true;
+            test.IsExpanded = true;
         }
 
-        // Método auxiliar para agregar carpeta al TreeView
-        private TreeViewItem AddFolder(TreeViewItem parent, string name)
+        // Método para aplicar patrones seleccionados al TreeView
+        private async Task ApplyPatternsInTreeViewAsync (TreeViewItem domain, TreeViewItem application, TreeViewItem infrastructure, TreeViewItem test)
+        {
+            // Repository
+            if (RepositoryCheck.IsChecked == true)
+            {
+                AddFolder (domain, "IRepository");
+                AddFolder (infrastructure, "Repository");
+            }
+
+            // CQRS
+            if (CqrsCheck.IsChecked == true)
+            {
+                var commands = AddFolder (application, "Commands");
+                AddFolder (commands, "Create");
+                AddFolder (commands, "Update");
+                AddFolder (commands, "Delete");
+
+                var queries = AddFolder(application, "Queries");
+                AddFolder (queries, "Get");
+            }
+
+            // Unit of Work
+            if (UnitOfWorkCheck.IsChecked == true)
+            {
+                AddFolder (infrastructure, "UnitOfWork");
+            }
+
+            // AutoMapper
+            if (AutoMapperCheck.IsChecked == true)
+            {
+                AddFile (application, "AutoMapperProfiles");
+            }
+
+            if (TestCheck.IsChecked == true)
+            {
+                AddFolder (test, "ControllerTest");
+                AddFolder (test, "ServiceTest");
+                AddFolder (test, "RepositoryTest");
+            }
+        }
+
+        // ---------------------- Métodos auxiliares para el TreeView ----------------------
+
+        // Método auxiliar para crear un proyecto en el TreeView
+        private TreeViewItem CreateProject (TreeViewItem root, string foldeName)
         {
             var item = new TreeViewItem
             {
-                Header = CreateHeader(name, "Folder.png"),
+                Header = CreateHeader(foldeName, "IconProject.png"),
+                IsExpanded = true
+            };
+
+            root.Items.Add(item);
+            return item;
+        }
+
+        // Método auxiliar para agregar carpeta al TreeView
+        private TreeViewItem AddFolder (TreeViewItem parent, string foldeName)
+        {
+            var item = new TreeViewItem
+            {
+                Header = CreateHeader(foldeName, "folder.png"),
                 IsExpanded = true
             };
 
@@ -231,46 +328,73 @@ namespace FileArchitectVSIX
         }
 
         // Método auxiliar para agregar archivo al TreeView
-        private void AddFile(TreeViewItem parent, string fileName)
+        private void AddFile (TreeViewItem parent, string fileName)
         {
             var item = new TreeViewItem
             {
-                Header = CreateHeader($"{fileName}.cs", "File.png")
+                Header = CreateHeader($"{fileName}{(fileName.EndsWith(".cs") ? "" : ".cs")}", "file.png")
             };
 
             parent.Items.Add(item);
         }
 
         // Método auxiliar para crear un header con ícono y texto
-        private StackPanel CreateHeader(string text, string iconRelativePath)
+        private StackPanel CreateHeader (string text, string iconRelativePath)
         {
+            // buscamos la imagen en la carpeta del ensamblado (output)
             string assemblyPath = Assembly.GetExecutingAssembly().Location;
-            string assemblyDirectory = Path.GetDirectoryName(assemblyPath);
-            string imagePath = Path.Combine(assemblyDirectory ?? "", "Resources", iconRelativePath);
-            var uri = new Uri(imagePath, UriKind.Absolute);
+            string assemblyDirectory = Path.GetDirectoryName(assemblyPath) ?? "";
+            string imagePath = Path.Combine(assemblyDirectory, "Resources", iconRelativePath);
 
-            return new StackPanel
+            // protecciones: si no existe el archivo, no rompas la UI
+            Image img = new Image { Width = 16, Height = 16, Margin = new Thickness(0, 0, 6, 0) };
+
+            try
             {
-                Orientation = Orientation.Horizontal,
-                Children =
+                if (File.Exists(imagePath))
                 {
-                    new Image
-                    {
-                        Source = new BitmapImage(uri),
-                        Width = 16,
-                        Height = 16,
-                        Margin = new Thickness(0,0,5,0)
-                    },
-                    new TextBlock
-                    {
-                        Text = text,
-                        VerticalAlignment = VerticalAlignment.Center
-                    }
+                    img.Source = new BitmapImage(new Uri(imagePath, UriKind.Absolute));
                 }
-            };
+            }
+            catch
+            {
+                // ignorar error de carga
+            }
+
+            var panel = new StackPanel { Orientation = Orientation.Horizontal };
+            panel.Children.Add(img);
+            panel.Children.Add(new TextBlock { Text = text, VerticalAlignment = VerticalAlignment.Center });
+
+            return panel;
         }
 
+        // Método para mostrar el overlay de carga
+        private async Task ShowLoadingAsync()
+        {
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
+            MainContent.IsEnabled = false;
+            LoadingOverlay.Visibility = Visibility.Visible;
 
+            await Task.Yield();
+        }
+
+        // Método para ocultar el overlay de carga
+        private async Task HideLoadingAsync()
+        {
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+            LoadingOverlay.Visibility = Visibility.Collapsed;
+            MainContent.IsEnabled = true;
+        }
+
+        // Método para actualizar la barra de progreso
+        private async Task UpdateProgressAsync(ProgressReportDto report)
+        {
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+            ProgressBar.Value = report.Percentage;
+            ProgressText.Text = report.Message;
+        }
     }
 }

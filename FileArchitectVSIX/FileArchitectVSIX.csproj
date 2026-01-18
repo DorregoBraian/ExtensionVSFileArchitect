@@ -50,6 +50,7 @@
     <Compile Include="Dtos\ArchitectureRequestDto.cs" />
     <Compile Include="Dtos\Enum\ArchitectureType.cs" />
     <Compile Include="Dtos\OperationResultDto.cs" />
+    <Compile Include="Dtos\ProgressReportDto.cs" />
     <Compile Include="Dtos\ProjectSpecDto.cs" />
     <Compile Include="IServices\IArchitectureService.cs" />
     <Compile Include="IServices\IFolderAndFileService.cs" />
@@ -103,6 +104,10 @@
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
     <Content Include="Resources\Folder.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
+    <Content Include="Resources\IconProject.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>

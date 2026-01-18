@@ -10,5 +10,6 @@ namespace FileArchitectVSIX.Dtos
         public bool UseCQRS { get; set; }
         public bool UseUnitOfWork { get; set; }
         public bool UseAutoMapper { get; set; }
+        public bool UserTestingProject { get; set; }
     }
 }

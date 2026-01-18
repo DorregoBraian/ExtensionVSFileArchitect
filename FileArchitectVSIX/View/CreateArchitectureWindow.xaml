@@ -2,98 +2,179 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Create Architecture Project"
-        Height="400"
-        Width="600"
+        Height="450"
+        Width="800"
         WindowStartupLocation="CenterScreen">
 
-    <Grid Margin="10">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="2*" />
-            <ColumnDefinition Width="3*" />
-        </Grid.ColumnDefinitions>
+    <!-- Recursos: color morado y estilos simples -->
+    <Window.Resources>
+        <!-- Morado VS -->
+        <SolidColorBrush x:Key="VsPurple" Color="#68217A"/>
 
-        <!-- CONFIG -->
-        <StackPanel Grid.Column="0">
+        <!-- Estilo para botones morados -->
+        <Style x:Key="PurpleButton" TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource VsPurple}" />
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Margin" Value="4"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border CornerRadius="4" Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                        <!-- Hover change -->
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Opacity" Value="0.9"/>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Opacity" Value="0.5"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
 
-            <!-- ComboBox Architecture -->
-            <TextBlock Text="Architecture" FontWeight="Bold" Margin="0,0,0,5"/>
+        <!-- Estilo para títulos del panel -->
+        <Style TargetType="TextBlock" x:Key="PanelHeader">
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Margin" Value="0,0,0,5"/>
+        </Style>
+    </Window.Resources>
 
-            <ComboBox Name="ArchitectureCombo" SelectedIndex="0" Margin="0,0,0,15" SelectionChanged="OnSelectionChanged">
-                <ComboBoxItem Content="Selecione una Arquitectura" IsEnabled="False"/>
-                <ComboBoxItem Content="Hexagonal"/>
-                <ComboBoxItem Content="Clean"/>
-                <ComboBoxItem Content="MVC"/>
-            </ComboBox>
+    <Grid>
+        <!-- CONTENIDO PRINCIPAL -->
+        <Grid x:Name="MainContent">
+            <Grid Margin="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*"/>
+                    <ColumnDefinition Width="3*"/>
+                </Grid.ColumnDefinitions>
 
-            <TextBlock Text="Project Name" FontWeight="Bold" Margin="0,10,0,5" Name="BaseNamespaceLabel" Visibility="Collapsed"/>
-            <TextBox Name="BaseNamespaceTextBox" Margin="0,0,0,10" Visibility="Collapsed" ToolTip="Ej: MyProject.MyApp"/>
-            
-            <!-- ComboBox Patrones -->
-            <TextBlock Text="Design Patterns" FontWeight="Bold" Margin="0,10,0,5"/>
+                <!-- LEFT: CONFIG -->
+                <StackPanel Grid.Column="0" x:Name="ConfigPanel">
 
-            <StackPanel>
-                <CheckBox Content="Repository Pattern" Name="RepositoryCheck" Checked="OnSelectionChanged" Unchecked="OnSelectionChanged">
-                    <CheckBox.ToolTip>
-                        <ToolTip MaxWidth="250">
-                            <TextBlock TextWrapping="Wrap">
-                                Patrón de diseño de software que actúa como un mediador entre la lógica de negocio de una aplicación y la capa de acceso a datos (como una base de datos), encapsulando la lógica para almacenar, recuperar y buscar objetos, y así separar las preocupaciones y facilitar el mantenimiento, las pruebas y las migraciones de datos sin afectar el núcleo de la aplicación.
-                            </TextBlock>
-                        </ToolTip>
-                    </CheckBox.ToolTip>
-                </CheckBox>
+                    <TextBlock Text="Architecture" Style="{StaticResource PanelHeader}"/>
 
-                <CheckBox Content="CQRS" Name="CqrsCheck" Checked="OnSelectionChanged" Unchecked="OnSelectionChanged">
-                    <CheckBox.ToolTip>
-                        <ToolTip MaxWidth="250">
-                            <TextBlock TextWrapping="Wrap">
-                                Patrón de arquitectura de software que separa las operaciones de lectura (Consultas o Queries) de las operaciones de escritura (Comandos o Commands).
-                            </TextBlock>
-                        </ToolTip>
-                    </CheckBox.ToolTip>
-                </CheckBox>
+                    <ComboBox Name="ArchitectureCombo" SelectedIndex="0" Margin="0,0,0,10" SelectionChanged="OnSelectionChangedAsync">
+                        <ComboBoxItem Content="Seleccione una Arquitectura" IsEnabled="False"/>
+                        <ComboBoxItem Content="Hexagonal"/>
+                        <ComboBoxItem Content="Clean"/>
+                        <ComboBoxItem Content="MVC"/>
+                    </ComboBox>
 
-                <CheckBox Content="Unit of Work" Name="UnitOfWorkCheck" Checked="OnSelectionChanged" Unchecked="OnSelectionChanged">
-                    <CheckBox.ToolTip>
-                        <ToolTip MaxWidth="250">
-                            <TextBlock TextWrapping="Wrap">
-                                Patrón de diseño de software que agrupa múltiples operaciones de base de datos (como inserciones, actualizaciones y eliminaciones) en una única transacción, asegurando que todas se confirmen (commit) o ninguna se confirme (rollback), manteniendo la integridad de los datos. Actúa como una capa de abstracción sobre el ORM (como Entity Framework, donde DbContext ya lo implementa), coordinando repositorios para que todos los cambios se guarden juntos, o si falla algo, todo se deshace, evitando inconsistencias.
-                            </TextBlock>
-                        </ToolTip>
-                    </CheckBox.ToolTip>
-                </CheckBox>
+                    <!-- Project name input: inicialmente hidden -->
+                    <TextBlock Text="Project Name" FontWeight="Bold" Margin="0,10,0,5" Name="BaseNamespaceLabel" Visibility="Collapsed"/>
+                    <Grid Margin="0,0,0,10" Visibility="Collapsed" Name="BaseNamespaceContainer">
+                        <!-- TextBox real -->
+                        <TextBox Name="BaseNamespaceTextBox" Padding="6,4" TextChanged="OnBaseNamespaceTextChangedAsync"/>
+                        <!-- Placeholder -->
+                        <TextBlock Name="BaseNamespacePlaceholder" Text="Ej: MyProject" Foreground="Gray" Margin="8,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False"/>
+                    </Grid>
 
-                <CheckBox Content="AutoMapper" Name="AutoMapperCheck" Checked="OnSelectionChanged" Unchecked="OnSelectionChanged">
-                    <CheckBox.ToolTip>
-                        <ToolTip MaxWidth="250">
-                            <TextBlock TextWrapping="Wrap">
-                                AutoMapper es una biblioteca de mapeo de objetos. Ayuda a los desarrolladores a mapear automáticamente datos entre objetos con estructuras similares como entidades de base de datos y DTOs (Objetos de Transferencia de Datos).
-                            </TextBlock>
-                        </ToolTip>
-                    </CheckBox.ToolTip>
-                </CheckBox>
-            </StackPanel>
+                    <!-- ComboBox Patrones  oculto hasta que el usuario escriba el nombre -->
+                    <StackPanel Name="PatternsPanel" Visibility="Collapsed">
+                        <TextBlock Text="Design Patterns" Style="{StaticResource PanelHeader}"/>
 
-            <!-- Buttons -->
-            <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
-                <Button Content="Reset" Width="100" Click="OnResetClicked"/>
-                <Button Content="Generate" Width="100" Margin="20,0,0,0" Click="OnGenerateClicked"/>
-            </StackPanel>
-        </StackPanel>
+                        <!-- CheckBoxes para Repository -->
+                        <CheckBox Content="Repository Pattern" Name="RepositoryCheck" Margin="0,5" Checked="OnPatternChangedAsync" Unchecked="OnPatternChangedAsync">
+                            <CheckBox.ToolTip>
+                                <ToolTip MaxWidth="250">
+                                    <TextBlock TextWrapping="Wrap">
+                            Patrón de diseño de software que actúa como un mediador entre la lógica de negocio de una aplicación y la capa de acceso a datos (como una base de datos), encapsulando la lógica para almacenar, recuperar y buscar objetos, y así separar las preocupaciones y facilitar el mantenimiento, las pruebas y las migraciones de datos sin afectar el núcleo de la aplicación.
+                                    </TextBlock>
+                                </ToolTip>
+                            </CheckBox.ToolTip>
+                        </CheckBox>
 
-        <!-- PREVIEW -->
-        <Grid Grid.Column="1" Margin="10,0,0,0">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
+                        <!-- CheckBoxes para CQRS -->
+                        <CheckBox Content="CQRS" Name="CqrsCheck" Margin="0,5" Checked="OnPatternChangedAsync" Unchecked="OnPatternChangedAsync">
+                            <CheckBox.ToolTip>
+                                <ToolTip MaxWidth="250">
+                                    <TextBlock TextWrapping="Wrap">
+                            Patrón de arquitectura de software que separa las operaciones de lectura (Consultas o Queries) de las operaciones de escritura (Comandos o Commands).
+                                    </TextBlock>
+                                </ToolTip>
+                            </CheckBox.ToolTip>
+                        </CheckBox>
 
-            <TextBlock Text="Project Preview"
-               FontWeight="Bold"
-               Margin="0,0,0,5"/>
+                        <!-- CheckBoxes para Unit of Work -->
+                        <CheckBox Content="Unit of Work" Name="UnitOfWorkCheck" Margin="0,5" Checked="OnPatternChangedAsync" Unchecked="OnPatternChangedAsync">
+                            <CheckBox.ToolTip>
+                                <ToolTip MaxWidth="250">
+                                    <TextBlock TextWrapping="Wrap">
+                            Patrón de diseño de software que agrupa múltiples operaciones de base de datos (como inserciones, actualizaciones y eliminaciones) en una única transacción, asegurando que todas se confirmen (commit) o ninguna se confirme (rollback), manteniendo la integridad de los datos. Actúa como una capa de abstracción sobre el ORM (como Entity Framework, donde DbContext ya lo implementa), coordinando repositorios para que todos los cambios se guarden juntos, o si falla algo, todo se deshace, evitando inconsistencias.
+                                    </TextBlock>
+                                </ToolTip>
+                            </CheckBox.ToolTip>
+                        </CheckBox>
 
-            <TreeView Name="PreviewTree"
-              Grid.Row="1"/>
+                        <!-- CheckBoxes para AutoMapper -->
+                        <CheckBox Content="AutoMapper" Name="AutoMapperCheck" Margin="0,5" Checked="OnPatternChangedAsync" Unchecked="OnPatternChangedAsync">
+                            <CheckBox.ToolTip>
+                                <ToolTip MaxWidth="250">
+                                    <TextBlock TextWrapping="Wrap">
+                            AutoMapper es una biblioteca de mapeo de objetos. Ayuda a los desarrolladores a mapear automáticamente datos entre objetos con estructuras similares como entidades de base de datos y DTOs (Objetos de Transferencia de Datos).
+                                    </TextBlock>
+                                </ToolTip>
+                            </CheckBox.ToolTip>
+                        </CheckBox>
+
+                        <!-- CheckBoxes para Test -->
+                        <CheckBox Content="Test" Name="TestCheck" Margin="0,5" Checked="OnPatternChangedAsync" Unchecked="OnPatternChangedAsync">
+                            <CheckBox.ToolTip>
+                                <ToolTip MaxWidth="250">
+                                    <TextBlock TextWrapping="Wrap">
+                            Es un proyecto de prueba xUnit para pruebas unitarias. Utiliza el framework xUnit.net para escribir y ejecutar pruebas automáticas que verifican pequeños componentes (métodos, clases, etc). Facilita la creación de pruebas aisladas, legibles y mantenibles; Detectar errores (bugs) temprano, prevenir regresiones (fallos en funcionalidades que antes funcionaban) para ayudarte a asegurar la calidad del software desde el principio del desarrollo.
+                                    </TextBlock>
+                                </ToolTip>
+                            </CheckBox.ToolTip>
+                        </CheckBox>
+
+                    </StackPanel>
+
+                    <!-- Buttons: ocultos hasta que el nombre exista -->
+                    <StackPanel Orientation="Horizontal" Margin="0,20,0,0" Name="ActionsPanel" Visibility="Collapsed">
+                        <Button Content="Reset" Width="100" Margin="20,0" Click="OnResetClickedAsync" Style="{StaticResource PurpleButton}"/>
+                        <Button Content="Generate" Width="100" Margin="20,0,0,0" Click="OnGenerateClickedAsync" Style="{StaticResource PurpleButton}"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- PREVIEW -->
+                <Grid Grid.Column="1" Margin="12,0,0,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Text="Project Preview" Style="{StaticResource PanelHeader}"/>
+                    <Border Grid.Row="1" Background="#0D000000" CornerRadius="6" Padding="6">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <TreeView Name="PreviewTree" />
+                        </ScrollViewer>
+                    </Border>
+                </Grid>
+            </Grid>
+        </Grid>
+
+        <!-- OVERLAY que bloquea la ventana (inicialmente oculto) -->
+        <Grid x:Name="LoadingOverlay" Background="#80000000" Visibility="Collapsed" IsHitTestVisible="True">
+            <!-- bloquea clicks debajo -->
+            <Border HorizontalAlignment="Center" VerticalAlignment="Center" Background="#FF2D2D30" Padding="20" CornerRadius="6">
+                <StackPanel>
+                    <TextBlock Text="Generando arquitectura..." Foreground="White" FontWeight="Bold" Margin="0,0,0,10" HorizontalAlignment="Center"/>
+
+                    <!-- Barra indeterminada -->
+                    <ProgressBar x:Name="ProgressBar" Minimum="0" Maximum="100" Height="14" Width="220"/>
+                    <TextBlock x:Name="ProgressText" Foreground="White" HorizontalAlignment="Center" Margin="0,8,0,0"/>
+
+                </StackPanel>
+            </Border>
         </Grid>
     </Grid>
 </Window>
-
