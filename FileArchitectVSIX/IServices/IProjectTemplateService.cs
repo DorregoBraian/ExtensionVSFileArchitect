@@ -14,7 +14,7 @@ namespace FileArchitectVSIX.IServices
         Task<Project> CreateTestProjectAndToSolutionAsync (DTE2 dte, string projectName);
         Task CreateMvcProjectAndAddToSolutionAsync (DTE2 dte, string projectName);
         Task AddProjectReferenceAsync (Project from, Project to);
-
+        Task AddNuGetPackageAsync (Project project, string packageName, string version = null);
 
 
     }

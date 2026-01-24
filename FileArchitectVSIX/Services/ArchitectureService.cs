@@ -42,7 +42,7 @@ namespace FileArchitectVSIX.Services
 
                     progress?.Report(new ProgressReportDto
                     {
-                        Percentage = 15,
+                        Percentage = 25,
                         Message = "Creando proyecto API..."
                     });
 
@@ -69,7 +69,7 @@ namespace FileArchitectVSIX.Services
 
                     progress?.Report(new ProgressReportDto
                     {
-                        Percentage = 30,
+                        Percentage = 45,
                         Message = "Creando proyecto Domain..."
                     });
 
@@ -99,7 +99,7 @@ namespace FileArchitectVSIX.Services
                     
                     progress?.Report(new ProgressReportDto
                     {
-                        Percentage = 50,
+                        Percentage = 65,
                         Message = "Creando proyecto Application..."
                     });
 
@@ -117,13 +117,13 @@ namespace FileArchitectVSIX.Services
                     await _folderAndFileService.CreateFolderAsync(application, "IServices");
                     await _folderAndFileService.CreateFolderAsync(application, "Services");
 
-                    // AutoMapper (si se selecciona)
+                    // AutoMapper
                     if (request.Options.UseAutoMapper)
                     {
                         await _folderAndFileService.CreateAutoMapperFileAsync(application, "AutoMapperProfiles");
                     }
 
-                    // CQRS (solo si se selecciona)
+                    // CQRS
                     if (request.Options.UseCQRS)
                     {
                         var commands = await _folderAndFileService.CreateFolderAsync(application, "Commands");
@@ -135,9 +135,6 @@ namespace FileArchitectVSIX.Services
                         await _folderAndFileService.CreateSubFolderAsync(queries, "Get");
                     }
 
-                    // referencias entre proyectos
-                    await _projectTemplateService.AddProjectReferenceAsync(application, domain);
-
                     await Task.Yield();
 
                     // ------------------------------ INFRASTRUCTURE ------------------------------
@@ -146,7 +143,7 @@ namespace FileArchitectVSIX.Services
 
                     progress?.Report(new ProgressReportDto
                     {
-                        Percentage = 70,
+                        Percentage = 85,
                         Message = "Creando proyecto Infrastructure..."
                     });
 
@@ -168,10 +165,6 @@ namespace FileArchitectVSIX.Services
                         await _folderAndFileService.CreateFolderAsync(infrastructure, "IRepository");
                     }
 
-                    // Referencias entre proyectos
-                    await _projectTemplateService.AddProjectReferenceAsync(infrastructure, application);
-                    await _projectTemplateService.AddProjectReferenceAsync(infrastructure, domain);
-
                     await Task.Yield();
 
                     // ------------------------------ TEST ------------------------------
@@ -180,7 +173,7 @@ namespace FileArchitectVSIX.Services
                     
                     progress?.Report(new ProgressReportDto
                     {
-                        Percentage = 85,
+                        Percentage = 90,
                         Message = "Creando proyecto Test..."
                     });
 
@@ -194,17 +187,62 @@ namespace FileArchitectVSIX.Services
                         await _folderAndFileService.CreateFolderAsync(testProject, "ServiceTests");
                         await _folderAndFileService.CreateFolderAsync(testProject, "RepositoryTests");
                     }
-                
-                    // ------------------------------ API PROJECT REFERENCIAS ------------------------------
-                    
+
+                    await Task.Yield();
+
+                    // ------------------------------ AGREGAR REFERENCIAS ---------------------------------
+
+                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
                     progress?.Report(new ProgressReportDto
                     {
-                        Percentage = 100,
+                        Percentage = 95,
                         Message = "Agregando referencias entre proyectos..."
                     });
 
                     await _projectTemplateService.AddProjectReferenceAsync(apiProject, application);
                     await _projectTemplateService.AddProjectReferenceAsync(apiProject, infrastructure);
+                    await _projectTemplateService.AddProjectReferenceAsync(infrastructure, application);
+                    await _projectTemplateService.AddProjectReferenceAsync(infrastructure, domain);
+                    await _projectTemplateService.AddProjectReferenceAsync(application, domain);
+
+                    await Task.Yield();
+
+                    // ------------------------------ AGREGAR PAQUETES NUGET ------------------------------
+
+                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+                    progress?.Report(new ProgressReportDto
+                    {
+                        Percentage = 100,
+                        Message = "Instalando Paquetes NuGet ..."
+                    });
+
+                    // Paquetes NuGet para la BD
+                    if (request.Options.UserSqlServer)
+                    {
+                        await _projectTemplateService.AddNuGetPackageAsync(apiProject, "Microsoft.EntityFrameworkCore.SqlServer");
+                    }
+
+                    if (request.Options.UserPostgreSQL)
+                    {
+                        await _projectTemplateService.AddNuGetPackageAsync(apiProject, "Npgsql.EntityFrameworkCore.PostgreSQL");
+                    }
+
+                    if (request.Options.UserMongoDB)
+                    {
+                        await _projectTemplateService.AddNuGetPackageAsync(apiProject, "MongoDB.EntityFrameworkCore");
+                    }
+
+                    // Paquetes NuGet (EntityFrameworkCore)
+                    await _projectTemplateService.AddNuGetPackageAsync(infrastructure, "Microsoft.EntityFrameworkCore");
+                    await _projectTemplateService.AddNuGetPackageAsync(infrastructure, "Microsoft.EntityFrameworkCore.Relational");
+                    await _projectTemplateService.AddNuGetPackageAsync(application, "Microsoft.EntityFrameworkCore");
+                    await _projectTemplateService.AddNuGetPackageAsync(application, "Microsoft.EntityFrameworkCore.Relational");
+
+                    // Paquete NuGet (AutoMapper)
+                    await _projectTemplateService.AddNuGetPackageAsync(application, "AutoMapper");
+                    await _projectTemplateService.AddNuGetPackageAsync(application, "AutoMapper.Extensions.Microsoft.DependencyInjection");
 
                     await Task.Yield();
 
@@ -228,6 +266,18 @@ namespace FileArchitectVSIX.Services
             });
 
         }
+
+        // Método específico para arquitectura Clean
+        //public async Task<OperationResultDto> CreateCleanArchitectureAsync(DTE2 dte, ArchitectureRequestDto request, IProgress<ProgressReportDto> progress)
+        //{
+
+        //}
+
+        //// Método específico para arquitectura MVC
+        //public async Task<OperationResultDto> CreateMvcArchitectureAsync(DTE2 dte, ArchitectureRequestDto request, IProgress<ProgressReportDto> progress)
+        //{
+
+        //}
 
         // Método para verificar si un proyecto ya existe en la solución
         private bool ProjectExists(Solution2 solution, string projectName)

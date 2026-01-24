@@ -1,9 +1,11 @@
 ﻿using EnvDTE;
 using EnvDTE80;
 using FileArchitectVSIX.IServices;
+using Microsoft.VisualStudio.ComponentModelHost;
 using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Shell.Interop;
+using NuGet.VisualStudio;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -156,6 +158,27 @@ namespace FileArchitectVSIX.Services
                 return;
 
             vsProject.References.AddProject(to);
+        }
+
+        // Método para instalar un paquete NuGet en un proyecto
+        public async Task AddNuGetPackageAsync(Project project, string packageId, string version = null)
+        {
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+            var componentModel = (IComponentModel)Package.GetGlobalService(typeof(SComponentModel));
+
+            var installer = componentModel.GetService<IVsPackageInstaller>();
+
+            if (installer == null)
+                throw new InvalidOperationException("No se pudo obtener IVsPackageInstaller");
+
+            installer.InstallPackage(
+                source: null,                 
+                project: project,
+                packageId: packageId,
+                version: version,
+                ignoreDependencies: false
+            );
         }
 
 

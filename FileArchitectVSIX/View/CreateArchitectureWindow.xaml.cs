@@ -43,18 +43,11 @@ namespace FileArchitectVSIX
                 case ArchitectureType.Hexagonal:
                     return await _architectureService.CreateHexagonalArchitectureAsync (dte, requestDto, progress);
 
-                //case ArchitectureType.Clean:
-                    //CreateFolder(project, "Core");
-                    //CreateFolder(project, "UseCases");
-                    //CreateFolder(project, "InterfaceAdapters");
-                    //CreateFolder(project, "Frameworks");
-                    
+                case ArchitectureType.Clean:
+                    //return await _architectureService.CreateCleanArchitectureAsync(dte, requestDto, progress);
 
-                //case ArchitectureType.MVC:
-                    //CreateFolder(project, "Models");
-                    //CreateFolder(project, "Views");
-                    //CreateFolder(project, "Controllers");
-                    
+                case ArchitectureType.MVC:
+                    //return await _architectureService.CreateMvcArchitectureAsync(dte, requestDto, progress);
 
                 default:
                     return new OperationResultDto
@@ -102,6 +95,9 @@ namespace FileArchitectVSIX
                     UseUnitOfWork = UnitOfWorkCheck.IsChecked == true,
                     UseAutoMapper = AutoMapperCheck.IsChecked == true,
                     UserTestingProject = TestCheck.IsChecked == true,
+                    UserSqlServer = SqlServerCheck.IsChecked == true,
+                    UserPostgreSQL = PostgreSQLCheck.IsChecked == true,
+                    UserMongoDB = MongoDBCheck.IsChecked == true
                 }
             };
 
@@ -148,12 +144,16 @@ namespace FileArchitectVSIX
             UnitOfWorkCheck.IsChecked = false;
             AutoMapperCheck.IsChecked = false;
             TestCheck.IsChecked = false;
+            SqlServerCheck.IsChecked = false;
+            PostgreSQLCheck.IsChecked = false;
+            MongoDBCheck.IsChecked = false;
 
             // Ocultar controles dependientes
             BaseNamespaceLabel.Visibility = Visibility.Collapsed;
             BaseNamespaceTextBox.Visibility = Visibility.Collapsed;
             PatternsPanel.Visibility = Visibility.Collapsed;
             ActionsPanel.Visibility = Visibility.Collapsed;
+            DatabasePanel.Visibility = Visibility.Collapsed;
 
             // Limpiar preview
             PreviewTree.Items.Clear();
@@ -180,6 +180,7 @@ namespace FileArchitectVSIX
             // esconder patrones y botones hasta que se escriba el nombre
             PatternsPanel.Visibility = Visibility.Collapsed;
             ActionsPanel.Visibility = Visibility.Collapsed;
+            DatabasePanel.Visibility = Visibility.Collapsed;
 
             // limpiar preview si se deseleccionó
             await UpdatePreviewAsync ();
@@ -188,7 +189,7 @@ namespace FileArchitectVSIX
         // Evento para actualizar la vista previa cuando cambia el texto del namespace base
         private async void OnBaseNamespaceTextChangedAsync (object sender, TextChangedEventArgs e)
         {
-            if (BaseNamespaceTextBox == null || BaseNamespacePlaceholder == null || PatternsPanel == null || ActionsPanel == null)
+            if (BaseNamespaceTextBox == null || BaseNamespacePlaceholder == null || PatternsPanel == null || ActionsPanel == null || DatabasePanel == null)
                 return;
 
             string txt = BaseNamespaceTextBox.Text?.Trim();
@@ -198,6 +199,7 @@ namespace FileArchitectVSIX
             BaseNamespacePlaceholder.Visibility =string.IsNullOrWhiteSpace(txt) ? Visibility.Visible : Visibility.Collapsed;
             PatternsPanel.Visibility = hasName ? Visibility.Visible : Visibility.Collapsed;
             ActionsPanel.Visibility = hasName ? Visibility.Visible : Visibility.Collapsed;
+            DatabasePanel.Visibility = hasName ? Visibility.Visible : Visibility.Collapsed;
 
             // actualizamos la preview con el nombre (para que muestre el nombre de la solución/proyecto)
             await UpdatePreviewAsync();
@@ -244,7 +246,7 @@ namespace FileArchitectVSIX
             AddFolder(application, "DTOs");
             AddFolder(application, "Services");
             AddFolder(application, "IServices");
-            AddFolder(infrastructure, "DbContext.cs");
+            AddFile(infrastructure, "DbContext.cs");
 
             // SOLO si el usuario marcó patrones
             await ApplyPatternsInTreeViewAsync (domain, application, infrastructure, test);

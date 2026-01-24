@@ -11,5 +11,8 @@ namespace FileArchitectVSIX.Dtos
         public bool UseUnitOfWork { get; set; }
         public bool UseAutoMapper { get; set; }
         public bool UserTestingProject { get; set; }
+        public bool UserSqlServer { get; set; }
+        public bool UserPostgreSQL { get; set; }
+        public bool UserMongoDB { get; set; }
     }
 }
