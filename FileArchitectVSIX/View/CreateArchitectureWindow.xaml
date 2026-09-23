@@ -133,7 +133,7 @@
                         </CheckBox>
 
                         <!-- CheckBoxes para Unit of Work -->
-                        <CheckBox Content="Unit of Work" Name="UnitOfWorkCheck" Margin="0,5" Checked="OnPatternChangedAsync" Unchecked="OnPatternChangedAsync">
+                        <!--<CheckBox Content="Unit of Work" Name="UnitOfWorkCheck" Margin="0,5" Checked="OnPatternChangedAsync" Unchecked="OnPatternChangedAsync">
                             <CheckBox.ToolTip>
                                 <ToolTip MaxWidth="250">
                                     <TextBlock TextWrapping="Wrap">
@@ -141,7 +141,7 @@
                                     </TextBlock>
                                 </ToolTip>
                             </CheckBox.ToolTip>
-                        </CheckBox>
+                        </CheckBox>-->
 
                         <!-- CheckBoxes para AutoMapper -->
                         <CheckBox Content="AutoMapper" Name="AutoMapperCheck" Margin="0,5" Checked="OnPatternChangedAsync" Unchecked="OnPatternChangedAsync">

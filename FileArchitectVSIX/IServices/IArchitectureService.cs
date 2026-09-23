@@ -10,8 +10,7 @@ namespace FileArchitectVSIX.IServices
     public interface IArchitectureService
     {
         Task<OperationResultDto> CreateHexagonalArchitectureAsync (DTE2 dte, ArchitectureRequestDto request, IProgress<ProgressReportDto> progress);
-        //Task<OperationResultDto> CreateClearArchitectureAsync (DTE2 dte, ArchitectureRequestDto request, IProgress<ProgressReportDto> progress);
-        //Task<OperationResultDto> CreateMvcArchitectureAsync (DTE2 dte, ArchitectureRequestDto request, IProgress<ProgressReportDto> progress);
-
+        Task<OperationResultDto> CreateCleanArchitectureAsync(DTE2 dte, ArchitectureRequestDto request, IProgress<ProgressReportDto> progress);
+        Task<OperationResultDto> CreateMvcArchitectureAsync(DTE2 dte, ArchitectureRequestDto request, IProgress<ProgressReportDto> progress);
     }
 }

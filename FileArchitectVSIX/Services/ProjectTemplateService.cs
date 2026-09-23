@@ -24,6 +24,9 @@ namespace FileArchitectVSIX.Services
             // Ruta física de la solución
             string solutionPath = Path.GetDirectoryName(dte.Solution.FullName);
 
+            if (string.IsNullOrEmpty(solutionPath))
+                throw new InvalidOperationException("La solución no está guardada. Guárdala primero.");
+
             // Ejecuta: dotnet new classlib -n {projectName}
             var process = new System.Diagnostics.Process();  // Proceso para ejecutar dotnet CLI
             process.StartInfo.FileName = "dotnet";           // Comando dotnet
@@ -45,8 +48,19 @@ namespace FileArchitectVSIX.Services
             // Agregar el proyecto a la solución
             dte.Solution.AddFromFile(projectFile);
 
-            // Buscar y retornar el proyecto recién creado
-            var proj = dte.Solution.Projects.Cast<Project>().First(p => p.Name == projectName);
+            Project proj = null;
+            for (int i = 0; i < 10; i++)
+            {
+                // Buscar y retornar el proyecto recién creado
+                proj = dte.Solution.Projects.Cast<Project>().FirstOrDefault(p => p.Name == projectName);
+
+                if (proj != null) break;
+
+                await Task.Delay(200);
+            }
+            if (proj == null)
+                throw new Exception("No se pudo encontrar el proyecto después de agregarlo.");
+
             return proj;
         }
 
@@ -57,6 +71,9 @@ namespace FileArchitectVSIX.Services
 
             // Ruta física donde está la solución (.sln)
             string solutionPath = Path.GetDirectoryName(dte.Solution.FullName);
+
+            if (string.IsNullOrEmpty(solutionPath))
+                throw new InvalidOperationException("La solución no está guardada. Guárdala primero.");
 
             // Ejecuta: dotnet new webapi -n {projectName}
             var process = new System.Diagnostics.Process();  // Proceso para ejecutar dotnet CLI
@@ -79,8 +96,19 @@ namespace FileArchitectVSIX.Services
             // Agregar el proyecto a la solución
             dte.Solution.AddFromFile(projectFile);
 
-            // Buscar y retornar el proyecto recién creado
-            var proj = dte.Solution.Projects.Cast<Project>().First(p => p.Name == projectName);
+            Project proj = null;
+            for (int i = 0; i < 10; i++)
+            {
+                // Buscar y retornar el proyecto recién creado
+                proj = dte.Solution.Projects.Cast<Project>().FirstOrDefault(p => p.Name == projectName);
+
+                if (proj != null) break;
+
+                await Task.Delay(200);
+            }
+            if (proj == null)
+                throw new Exception("No se pudo encontrar el proyecto después de agregarlo.");
+
             return proj;
         }
 
@@ -91,6 +119,9 @@ namespace FileArchitectVSIX.Services
 
             // Ruta donde vive la solución (.sln)
             string solutionPath = Path.GetDirectoryName(dte.Solution.FullName);
+
+            if (string.IsNullOrEmpty(solutionPath))
+                throw new InvalidOperationException("La solución no está guardada. Guárdala primero.");
 
             // Ejecuta: dotnet new xunit -n {projectName}
             var process = new System.Diagnostics.Process();
@@ -112,18 +143,32 @@ namespace FileArchitectVSIX.Services
             // Agregar el proyecto a la solución
             dte.Solution.AddFromFile(projectFile);
 
-            // Buscar y retornar el proyecto recién creado
-            var proj = dte.Solution.Projects.Cast<Project>().First(p => p.Name == projectName);
+            Project proj = null;
+            for (int i = 0; i < 10; i++)
+            {
+                // Buscar y retornar el proyecto recién creado
+                proj = dte.Solution.Projects.Cast<Project>().FirstOrDefault(p => p.Name == projectName);
+
+                if (proj != null) break;
+
+                await Task.Delay(200);
+            }
+            if (proj == null)
+                throw new Exception("No se pudo encontrar el proyecto después de agregarlo.");
+
             return proj;
         }
 
         // Método para crear un proyecto MVC y agregarlo a la solución
-        public async Task CreateMvcProjectAndAddToSolutionAsync (DTE2 dte, string projectName)
+        public async Task<Project> CreateMvcProjectAndAddToSolutionAsync (DTE2 dte, string projectName)
         {
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
             // Ruta donde vive la solución (.sln)
             string solutionPath = Path.GetDirectoryName(dte.Solution.FullName);
+
+            if (string.IsNullOrEmpty(solutionPath))
+                throw new InvalidOperationException("La solución no está guardada. Guárdala primero.");
 
             // Ejecuta: dotnet new mvc -n {projectName}
             var process = new System.Diagnostics.Process();
@@ -143,8 +188,26 @@ namespace FileArchitectVSIX.Services
                 $"{projectName}.csproj"
             );
 
+            if (!File.Exists(projectFile))
+                            throw new Exception($"No se encontró el archivo de proyecto: {projectFile}");
+
             // Agregar el proyecto a la solución
             dte.Solution.AddFromFile(projectFile);
+
+            Project proj = null;
+            for (int i = 0; i < 10; i++)
+            {
+                // Buscar y retornar el proyecto recién creado
+                proj = dte.Solution.Projects.Cast<Project>().FirstOrDefault(p => p.Name == projectName);
+
+                if (proj != null) break;
+
+                await Task.Delay(200);
+            }
+            if (proj == null)
+                throw new Exception("No se pudo encontrar el proyecto después de agregarlo.");
+
+            return proj;
         }
 
         // Método para agregar una referencia de proyecto

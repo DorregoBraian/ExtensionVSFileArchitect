@@ -13,14 +13,12 @@ namespace FileArchitectVSIX.Dtos
         // Ej: "MyCompany.MyApp"
         public string NameSpace { get; set; } = string.Empty;
 
+        // Ej: "MyApp"
+        public string ProjectName { get; set; } = "MyApp";
+
         // Opciones desde la UI (checkboxes)
         public ArchitectureOptionsDto Options { get; set; } = new ArchitectureOptionsDto();
 
-        // Nombre base para los proyectos (prefijo para Project names)
-        // Ej: si BaseProjectName = "MyApp", resultará en "MyApp.Domain", "MyApp.Application", ...
-        public string ProjectName { get; set; } = "MyApp";
 
-        // Especificaciones opcionales por proyecto (puedes dejar vacío y el service usa defaults)
-        //public List<ProjectSpecDto> ProjectSpecs { get; set; } = new List<ProjectSpecDto>();
     }
 }

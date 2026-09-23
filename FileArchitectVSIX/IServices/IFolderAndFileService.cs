@@ -11,9 +11,8 @@ namespace FileArchitectVSIX.IServices
         Task<ProjectItem> CreateFolderAsync (Project project, string folderName);
         Task<ProjectItem> CreateSubFolderAsync (ProjectItem parentFolder, string folderName);
         Task CreateAutoMapperFileAsync (Project project, string fileName);
+        Task CreateAutoMapperFileInFolderAsync(ProjectItem parentFolder, string contextName, Project project);
         Task CreateDbContextFileAsync (Project project, string fileName);
-
-
-
+        Task CreateDbContextInFolderAsync(ProjectItem parentFolder, string contextName, Project project);
     }
 }

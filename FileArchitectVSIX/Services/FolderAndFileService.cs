@@ -1,6 +1,7 @@
 ﻿using EnvDTE;
 using FileArchitectVSIX.IServices;
 using Microsoft.VisualStudio.Shell;
+using System;
 using System.IO;
 using System.Threading.Tasks;
 
@@ -78,6 +79,35 @@ namespace FileArchitectVSIX.Services
             project.ProjectItems.AddFromFile(filePath);
         }
 
+        public async Task CreateAutoMapperFileInFolderAsync(ProjectItem parentFolder, string contextName, Project project)
+        {
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+            string folderPath = Path.GetDirectoryName(parentFolder.FileNames[1]);
+            string filePath = Path.Combine(folderPath, $"{contextName}.cs");
+
+            // Crear archivo si no existe
+            if (!File.Exists(filePath))
+            {
+                File.WriteAllText(filePath, $@"
+                using AutoMapper;
+
+                namespace {project.Name}
+                {{
+                    public class AutoMapperProfile : Profile
+                    {{
+                        public AutoMapperProfile()
+                        {{
+                            // Configurá tus mapeos aquí, Por ejemplo:
+                            // CreateMap<User, UserDto>()
+                        }}
+
+                    }}
+                }}
+                ".Trim());
+            }
+        }
+
         // Método para crear un archivo DbContext
         public async Task CreateDbContextFileAsync(Project project, string contextName)
         {
@@ -118,7 +148,47 @@ namespace FileArchitectVSIX.Services
             project.ProjectItems.AddFromFile(filePath);
         }
 
-        
+        public async Task CreateDbContextInFolderAsync(ProjectItem parentFolder, string contextName, Project project)
+        {
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+            string folderPath = Path.GetDirectoryName(parentFolder.FileNames[1]);
+            string filePath = Path.Combine(folderPath, "DbContext.cs");
+
+            if (!File.Exists(filePath))
+            {
+                File.WriteAllText(filePath, $@"
+                using Microsoft.EntityFrameworkCore;
+
+                namespace {project.Name}
+                {{
+                    public class {contextName}DbContext : DbContext
+                    {{
+                        // DbSets
+                        // public DbSet<YourEntity> YourEntities {{ get; set; }}
+                        
+                        // Constructor      
+                        public {contextName}DbContext(DbContextOptions<{contextName}DbContext> options)
+                            : base(options)
+                        {{
+                        }}
+                        
+                        // Configurá el modelo aquí
+                        protected override void OnModelCreating(ModelBuilder modelBuilder)
+                        {{
+                            base.OnModelCreating(modelBuilder);
+                        }}
+                    }}
+                }}
+                ".Trim());
+            }
+
+            // Agregar al proyecto
+            project.ProjectItems.AddFromFile(filePath);
+        }
+
+
+
 
 
 

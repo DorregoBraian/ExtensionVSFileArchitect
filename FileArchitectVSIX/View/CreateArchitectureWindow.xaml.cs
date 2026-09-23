@@ -42,12 +42,12 @@ namespace FileArchitectVSIX
             {
                 case ArchitectureType.Hexagonal:
                     return await _architectureService.CreateHexagonalArchitectureAsync (dte, requestDto, progress);
+                
+                case ArchitectureType.MVC:
+                    return await _architectureService.CreateMvcArchitectureAsync (dte, requestDto, progress);
 
                 case ArchitectureType.Clean:
-                    //return await _architectureService.CreateCleanArchitectureAsync(dte, requestDto, progress);
-
-                case ArchitectureType.MVC:
-                    //return await _architectureService.CreateMvcArchitectureAsync(dte, requestDto, progress);
+                    return await _architectureService.CreateCleanArchitectureAsync (dte, requestDto, progress);
 
                 default:
                     return new OperationResultDto
@@ -92,7 +92,7 @@ namespace FileArchitectVSIX
                 {
                     UseRepository = RepositoryCheck.IsChecked == true,
                     UseCQRS = CqrsCheck.IsChecked == true,
-                    UseUnitOfWork = UnitOfWorkCheck.IsChecked == true,
+                    //UseUnitOfWork = UnitOfWorkCheck.IsChecked == true,
                     UseAutoMapper = AutoMapperCheck.IsChecked == true,
                     UserTestingProject = TestCheck.IsChecked == true,
                     UserSqlServer = SqlServerCheck.IsChecked == true,
@@ -141,7 +141,7 @@ namespace FileArchitectVSIX
             // Reset patrones
             RepositoryCheck.IsChecked = false;
             CqrsCheck.IsChecked = false;
-            UnitOfWorkCheck.IsChecked = false;
+            //UnitOfWorkCheck.IsChecked = false;
             AutoMapperCheck.IsChecked = false;
             TestCheck.IsChecked = false;
             SqlServerCheck.IsChecked = false;
@@ -150,7 +150,7 @@ namespace FileArchitectVSIX
 
             // Ocultar controles dependientes
             BaseNamespaceLabel.Visibility = Visibility.Collapsed;
-            BaseNamespaceTextBox.Visibility = Visibility.Collapsed;
+            BaseNamespaceContainer.Visibility = Visibility.Collapsed;
             PatternsPanel.Visibility = Visibility.Collapsed;
             ActionsPanel.Visibility = Visibility.Collapsed;
             DatabasePanel.Visibility = Visibility.Collapsed;
@@ -233,72 +233,253 @@ namespace FileArchitectVSIX
 
             PreviewTree.Items.Add(root);
 
-            // SOLO proyectos base (SIEMPRE)
-            var api = CreateProject(root, $"{baseName}");
-            var domain = CreateProject(root, $"Domain");
-            var application = CreateProject(root, $"Application");
-            var infrastructure = CreateProject(root, $"Infrastructure");
-            var test = CreateProject(root, $"Tests");
+            TreeViewItem api = null;
+            TreeViewItem domain = null;
+            TreeViewItem application = null;
+            TreeViewItem infrastructure = null;
+            TreeViewItem test = null;
 
-            // Carpetas mínimas base
-            AddFolder (api, "Controllers");
-            AddFolder(domain, "Entities");
-            AddFolder(application, "DTOs");
-            AddFolder(application, "Services");
-            AddFolder(application, "IServices");
-            AddFile(infrastructure, "DbContext.cs");
+            switch (ArchitectureCombo.SelectedIndex)
+            {
+                case 1: // HEXAGONAL
+                    BuildHexagonalArchitecture (root, baseName, out api, out domain, out application, out infrastructure, out test);
+                    break;
+
+                case 2: // CLEAN
+                    BuildCleanArchitecture (root, baseName, out api, out domain, out application, out infrastructure, out test);
+                    break;
+
+                case 3: // MVC
+                    BuildMVCArchitecture (root, baseName, out api, out test);
+                    break;
+
+                default:
+                    break;
+            }
 
             // SOLO si el usuario marcó patrones
-            await ApplyPatternsInTreeViewAsync (domain, application, infrastructure, test);
+            await ApplyPatternsInTreeViewAsync (api, domain, application, infrastructure, test);
 
             // Expandir nodos
-            api.IsExpanded = true;
-            domain.IsExpanded = true;
-            application.IsExpanded = true;
-            infrastructure.IsExpanded = true;
-            test.IsExpanded = true;
+            if (api != null)
+                api.IsExpanded = true;
+
+            if (domain != null)
+                domain.IsExpanded = true;
+
+            if (application != null)
+                application.IsExpanded = true;
+
+            if (infrastructure != null)
+                infrastructure.IsExpanded = true;
+
+            if (test != null)
+                test.IsExpanded = true;
+
         }
 
         // Método para aplicar patrones seleccionados al TreeView
-        private async Task ApplyPatternsInTreeViewAsync (TreeViewItem domain, TreeViewItem application, TreeViewItem infrastructure, TreeViewItem test)
+        private async Task ApplyPatternsInTreeViewAsync (TreeViewItem api, TreeViewItem domain, TreeViewItem application, TreeViewItem infrastructure, TreeViewItem test)
         {
-            // Repository
-            if (RepositoryCheck.IsChecked == true)
-            {
-                AddFolder (domain, "IRepository");
-                AddFolder (infrastructure, "Repository");
-            }
+            switch(ArchitectureCombo.SelectedIndex)
+                {
+                case 1: // HEXAGONAL
+                    // Repository
+                    if (RepositoryCheck.IsChecked == true)
+                    {
+                        AddFolder(domain, "IRepository");
+                        AddFolder(infrastructure, "Repository");
+                    }
 
-            // CQRS
-            if (CqrsCheck.IsChecked == true)
-            {
-                var commands = AddFolder (application, "Commands");
-                AddFolder (commands, "Create");
-                AddFolder (commands, "Update");
-                AddFolder (commands, "Delete");
+                    // CQRS
+                    if (CqrsCheck.IsChecked == true)
+                    {
+                        var commands = AddFolder(application, "Commands");
+                        AddFolder(commands, "Create");
+                        AddFolder(commands, "Update");
+                        AddFolder(commands, "Delete");
 
-                var queries = AddFolder(application, "Queries");
-                AddFolder (queries, "Get");
-            }
+                        var queries = AddFolder(application, "Queries");
+                        AddFolder(queries, "Get");
+                    }
 
-            // Unit of Work
-            if (UnitOfWorkCheck.IsChecked == true)
-            {
-                AddFolder (infrastructure, "UnitOfWork");
-            }
+                    // Unit of Work
+                    //if (UnitOfWorkCheck.IsChecked == true)
+                    //{
+                    //    AddFolder(infrastructure, "UnitOfWork");
+                    //}
 
-            // AutoMapper
-            if (AutoMapperCheck.IsChecked == true)
-            {
-                AddFile (application, "AutoMapperProfiles");
-            }
+                    // AutoMapper
+                    if (AutoMapperCheck.IsChecked == true)
+                    {
+                        AddFile(application, "AutoMapperProfiles");
+                    }
 
-            if (TestCheck.IsChecked == true)
-            {
-                AddFolder (test, "ControllerTest");
-                AddFolder (test, "ServiceTest");
-                AddFolder (test, "RepositoryTest");
+                    // Testing
+                    if (TestCheck.IsChecked == true)
+                    {
+                        AddFolder(test, "ControllerTest");
+                        AddFolder(test, "ServiceTest");
+                        AddFolder(test, "RepositoryTest");
+                    }
+
+                    break;
+                case 2: // CLEAN
+                    // Repository
+                    if (RepositoryCheck.IsChecked == true)
+                    {
+                        AddFolder(application, "IRepository");
+                        AddFolder(infrastructure, "Repository");
+                    }
+
+                    // CQRS
+                    if (CqrsCheck.IsChecked == true)
+                    {
+                        var commands = AddFolder(application, "Commands");
+                        AddFolder(commands, "Create");
+                        AddFolder(commands, "Update");
+                        AddFolder(commands, "Delete");
+
+                        var queries = AddFolder(application, "Queries");
+                        AddFolder(queries, "Get");
+                    }
+
+                    // Unit of Work
+                    //if (UnitOfWorkCheck.IsChecked == true)
+                    //{
+                    //    AddFolder(infrastructure, "UnitOfWork");
+                    //}
+
+                    // AutoMapper
+                    if (AutoMapperCheck.IsChecked == true)
+                    {
+                        AddFile(application, "AutoMapperProfiles");
+                    }
+
+                    // Testing
+                    if (TestCheck.IsChecked == true)
+                    {
+                        AddFolder(test, "ControllerTest");
+                        AddFolder(test, "ServiceTest");
+                        AddFolder(test, "RepositoryTest");
+                    }
+                    break;
+                case 3: // MVC
+                    // Repository
+                    var data = FindFolder(api, "Data");
+                    if (data != null && RepositoryCheck.IsChecked == true)
+                    {
+                        AddFolder(data, "IRepository");
+                        AddFolder(data, "Repository");
+                    }
+
+                    // CQRS
+                    var services = FindFolder(api, "Services");
+                    if (services != null && CqrsCheck.IsChecked == true)
+                    {
+                        var commands = AddFolder(services, "Commands");
+                        AddFolder(commands, "Create");
+                        AddFolder(commands, "Update");
+                        AddFolder(commands, "Delete");
+                        var queries = AddFolder(services, "Queries");
+                        AddFolder(queries, "Get");
+                    }
+
+                    // Unit of Work
+                    //if (services != null && UnitOfWorkCheck.IsChecked == true)
+                    //{
+                    //    AddFolder(services, "UnitOfWork");
+                    //}
+
+                    // AutoMapper
+                    var Helpers = FindFolder(api, "Helpers");
+                    if (Helpers != null && AutoMapperCheck.IsChecked == true)
+                    {
+                        AddFile(Helpers, "AutoMapperProfiles");
+                    }
+
+                    // Testing
+                    if (TestCheck.IsChecked == true)
+                    {
+                        AddFolder(test, "ControllerTest");
+                        AddFolder(test, "ServiceTest");
+                        AddFolder(test, "RepositoryTest");
+                    }
+                    break;
+                default:
+                    break;
             }
+        }
+
+        private void BuildHexagonalArchitecture (TreeViewItem root, string baseName, out TreeViewItem api, out TreeViewItem domain, out TreeViewItem application, out TreeViewItem infrastructure, out TreeViewItem test)
+        {
+            api = CreateProject(root, baseName);
+            AddFolder(api, "Controllers");
+
+            domain = CreateProject(root, "Domain");
+            AddFolder(domain, "Entities");
+
+            application = CreateProject(root, "Application");
+            var dtos = AddFolder(application, "DTOs");
+            AddFolder(dtos, "Requests");
+            AddFolder(dtos, "Responses");
+            AddFolder(application, "Services");
+            AddFolder(application, "IServices");
+
+            infrastructure = CreateProject(root, "Infrastructure");
+            AddFile(infrastructure, "DbContext.cs");
+
+            test = CreateProject(root, "Tests");
+        }
+
+        private void BuildCleanArchitecture (TreeViewItem root, string baseName, out TreeViewItem api, out TreeViewItem domain, out TreeViewItem application, out TreeViewItem infrastructure, out TreeViewItem test)
+        {
+            api = CreateProject(root, baseName);
+            AddFolder(api, "Controllers");
+
+            domain = CreateProject(root, "Domain");
+            AddFolder(domain, "Entities");
+
+            application = CreateProject(root, "Application");
+            var dtos = AddFolder(application, "DTOs");
+            AddFolder(dtos, "Requests");
+            AddFolder(dtos, "Responses");
+            AddFolder(application, "IServices");
+
+            infrastructure = CreateProject(root, "Infrastructure");
+            AddFolder(infrastructure, "Services");
+            AddFile(infrastructure, "DbContext.cs");
+
+            test = CreateProject(root, "Tests");
+        }
+
+        private void BuildMVCArchitecture (TreeViewItem root, string baseName, out TreeViewItem api, out TreeViewItem test)
+        {
+            api = CreateProject(root, baseName);
+            AddFolder(api, "Controllers");
+
+            var modals = AddFolder(api, "Models");
+            AddFolder(modals, "ViewModels");
+            AddFolder(modals, "Entitie");
+
+            var dto = AddFolder(modals, "DTOs");
+            AddFolder(dto, "Requests");
+            AddFolder(dto, "Responses");
+
+            AddFolder(api, "Views");
+
+            var services = AddFolder(api, "Services");
+            AddFolder(services, "IServices");
+            AddFolder(services, "Services");
+
+            var data = AddFolder(api, "Data");
+            AddFolder(data, "DbContexts");
+
+            var helpers =AddFolder(api, "Helpers");
+
+            AddFolder(api, "ViewComponents");
+
+            test = CreateProject(root, "Tests");
         }
 
         // ---------------------- Métodos auxiliares para el TreeView ----------------------
@@ -309,6 +490,7 @@ namespace FileArchitectVSIX
             var item = new TreeViewItem
             {
                 Header = CreateHeader(foldeName, "IconProject.png"),
+                Tag = foldeName,
                 IsExpanded = true
             };
 
@@ -322,6 +504,7 @@ namespace FileArchitectVSIX
             var item = new TreeViewItem
             {
                 Header = CreateHeader(foldeName, "folder.png"),
+                Tag = foldeName,
                 IsExpanded = true
             };
 
@@ -334,10 +517,23 @@ namespace FileArchitectVSIX
         {
             var item = new TreeViewItem
             {
-                Header = CreateHeader($"{fileName}{(fileName.EndsWith(".cs") ? "" : ".cs")}", "file.png")
+                Header = CreateHeader($"{fileName}{(fileName.EndsWith(".cs") ? "" : ".cs")}", "file.png"),
+                Tag = fileName
             };
 
             parent.Items.Add(item);
+        }
+
+        // Metodo para buscar carpetas ya existentes en el TreeView
+        private TreeViewItem FindFolder (TreeViewItem parent, string folderName)
+        {
+            foreach (TreeViewItem item in parent.Items)
+            {
+                if (item.Tag?.ToString() == folderName)
+                    return item;
+            }
+
+            return null;
         }
 
         // Método auxiliar para crear un header con ícono y texto
